@@ -1,6 +1,6 @@
 class Buffer {
 
-    spaceBetweenFrames = 10;
+    spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
     frames = [];
     outputFrame = null;
 
@@ -15,12 +15,13 @@ class Buffer {
         for (var i = 0; i < bufferSize; i++) {
             
             // Crea il frame
-            var newFrame = new Frame(two, framePosition, y, frameSize, "white", null)
+            //var newFrame = new Frame(two, framePosition, y, frameSize, "white", null);
+            var newFrame = new Frame(framePosition, y, frameSize, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two)
 
             // Se e' l'ultimo frame, ovvero il frame di output, scrivici sopra "Output frame"
             if (i == bufferSize - 1) {
                 this.outputFrame = newFrame;
-                var txt = two.makeText("Output frame", framePosition, y - frameSize/2 - 10, fontStyleSmallBlack);
+                var txt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, fontStyleSmallBlack);
                 txt.alignment = "center";
             }
 

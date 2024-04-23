@@ -7,28 +7,8 @@ var relationSize = 9;
 var buffer = null;
 var relation = null;
 
+
 // PARAMETRI PER GRAFICA
-var fontStyleMediumBlack = {
-    alignment: "left",
-    family: "Calibri",
-    size: 20,
-    weight: 650,
-    fill: "rgb(0,0,0)"
-}
-var fontStyleMediumGray = {
-    alignment: "left",
-    family: "Calibri",
-    size: 20,
-    weight: 600,
-    fill: "rgb(79,79,79)"
-}
-var fontStyleSmallBlack = {
-    alignment: "left",
-    family: "Calibri",
-    size: 16,
-    weight: 650,
-    fill: "rgb(0,0,0)"
-}
 
 // Misure dello schermo
 var windowW = window.innerWidth;
@@ -36,7 +16,44 @@ var windowH = window.innerHeight;
 var centerX = windowW / 2;
 var centerY = windowH / 2;
 
-var frameSize = windowW/15;
+// Costanti
+const MAX_ELEMENTS_PER_FRAME = 5;
+
+const MEDIUM_LINE = windowW/550;
+const THICK_LINE = windowW/400;
+const VERY_THICK_LINE = windowW/320;
+
+const frameSize = windowW/15;
+const SPACE_BETWEEN_FRAMES = windowW/200;
+
+const fontSizeBig = windowW/60;
+const fontSizeMedium = windowW/80;
+const fontSizeSmall = windowW/100;
+
+// Stili testo
+var fontStyleMediumBlack = {
+    alignment: "left",
+    family: "Calibri",
+    size: fontSizeMedium,
+    weight: 650,
+    fill: "rgb(0,0,0)"
+}
+var fontStyleMediumGray = {
+    alignment: "left",
+    family: "Calibri",
+    size: fontSizeMedium,
+    weight: 600,
+    fill: "rgb(79,79,79)"
+}
+var fontStyleSmallBlack = {
+    alignment: "left",
+    family: "Calibri",
+    size: fontSizeSmall,
+    weight: 650,
+    fill: "rgb(0,0,0)"
+}
+
+
 
 
 function onBodyLoad() {
@@ -121,9 +138,11 @@ function startSimulation() {
 
     // Linee che separano le sezioni
     // verticale tra colonna sx e colonna centrale:
-    two.makeLine(leftColumn.topRightCorner.x, leftColumn.topRightCorner.y, leftColumn.bottomRightCorner.x, leftColumn.bottomRightCorner.y);
+    var line1 = two.makeLine(leftColumn.topRightCorner.x, leftColumn.topRightCorner.y, leftColumn.bottomRightCorner.x, leftColumn.bottomRightCorner.y);
+    line1.linewidth = MEDIUM_LINE;
     // orizzontale tra upper e lower
-    two.makeLine(upperPart.bottomLeftCorner.x, upperPart.bottomLeftCorner.y, upperPart.bottomRightCorner.x, upperPart.bottomRightCorner.y);
+    var line2 = two.makeLine(upperPart.bottomLeftCorner.x, upperPart.bottomLeftCorner.y, upperPart.bottomRightCorner.x, upperPart.bottomRightCorner.y);
+    line2.linewidth = MEDIUM_LINE;
 
 
 
@@ -180,11 +199,16 @@ function elaborateNode() {
 
 
 
-// TEMPORANEO per testare l'highlighting
+// TEMPORANEI per testare l'highlighting
 function divideRelation() {
-    if (relation == null) return;
-
-    relation.divideIntoSubgroups(bufferSize - 1);
+    if (relation == null)
+        return;
+    relation.splitGroup(bufferSize - 1);
+}
+function mergeRelation() {
+    if (relation == null)
+        return;
+    relation.mergeSiblings();
 }
 
 
