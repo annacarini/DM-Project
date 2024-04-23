@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <script type="text/javascript" src="two.min.js"></script>
+        <script type="text/javascript" src="application.js"></script>
+        <script type="text/javascript" src="section.js"></script>
+        <script type="text/javascript" src="buffer.js"></script>
+        <script type="text/javascript" src="relation.js"></script>
+        <script type="text/javascript" src="frame.js"></script>
+        <script type="text/javascript" src="tree.js"></script>
+    </head>
+    <body onload="onBodyLoad()">
+        <div id="menu">
+            <form name="menu_form">
+                Number of frames in the buffer:<br/>
+                <input type="range" id="buffer_size" min="3" max="10" value="3"/><span id="buffer_size_value">3</span><br/>
+                Number of pages of the relation:<br/>
+                <input type="range" id="relation_size" min="1" max="100" value="9"/><span id="relation_size_value">9</span><br/>
+                <input type="button" id="start_simulation" value="Start" onclick="startSimulation();"/>
+            </form>
+        </div>
+        <div id="simulation" hidden>
+            <div>
+                <!-- TEMPORANEI -->
+                <input type="button" id="divide_relation" value="Divide" onclick="divideRelation();" style="position:fixed; z-index:1;"/>
+                <input type="button" id="merge_relation" value="Merge" onclick="mergeRelation();" style="position:fixed; left:50px; z-index:1;"/>
+            </div>
+        </div>
+    </body>
+</html>
+
+
+

@@ -1,7 +1,13 @@
 // Make an instance of two and place it on the page.
 class Frame {
-    constructor(width, height, color, max_elements, two) {
-        this.linewidth = 5
+    constructor(x, y, width, height, color, max_elements, two) {
+        this.linewidth = THICK_LINE;
+
+        this.x = x;
+        this.y = y;
+        this.size = width;
+
+        this.two = two;
 
         this.group = new Two.Group();
 
@@ -32,6 +38,15 @@ class Frame {
         this.group.add(this.rect_search)
 
         two.add(this.group)
+
+        this.setPosition(x, y);
+
+
+        // PROVA CLICK HANDLER (funziona!), nota: bisogna per forza fare two.update() prima di assegnare l'event listener, se no non funziona!!
+        two.update();
+        this.group._renderer.elem.addEventListener('click', () => {
+            console.log("Content: " + this.elements);   // quando clicchi ti stampa nella console gli elementi di questo frame
+        }, false);
     }
 
 
@@ -67,6 +82,8 @@ class Frame {
 
     setColor(color) {
         //cambiare colore
+        this.rect_content.fill = color;     // DA CONTROLLARE
+        this.color = color;                 // serve per far funzionare la funzione "mergeSiblings" di relation
     }
 
 
@@ -91,7 +108,7 @@ class Frame {
         this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2
 
         for (var i = 0; i < new_elements.length; i++) {
-            var text = two.makeText(new_elements[i], this.rect_content.position.x, (i - (Math.floor(this.max_elements / 2))) * offset)
+            var text = this.two.makeText(new_elements[i], this.rect_content.position.x, (i - (Math.floor(this.max_elements / 2))) * offset)
             text.visible = this.view
             this.elements.push([new_elements[i], text]);
             this.group.add(text)
@@ -104,7 +121,7 @@ class Frame {
         this.rect_content.height += offset
         this.rect_content.position.y +=  offset / 2
 
-        var text = two.makeText(element, this.rect_content.position.x, (indx - (Math.floor(this.max_elements / 2))) * offset)
+        var text = this.two.makeText(element, this.rect_content.position.x, (indx - (Math.floor(this.max_elements / 2))) * offset)
         text.visible = this.view
         this.group.add(text)
 
