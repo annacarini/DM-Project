@@ -1,11 +1,11 @@
 // Make an instance of two and place it on the page.
 class Frame {
-    constructor(x, y, width, height, color, max_elements, two) {
+    constructor(x, y, size, color, max_elements, two) {
         this.linewidth = THICK_LINE;
 
         this.x = x;
         this.y = y;
-        this.size = width;
+        this.size = size;
 
         this.two = two;
 
@@ -13,22 +13,20 @@ class Frame {
 
         this.elements = [];
         this.max_elements = max_elements
-        this.width = width
-        this.height = height
         this.color = color
 
         this.sorted = false
         this.view = 1 // 0 relation, 1 buffer
 
-        this.rect = two.makeRectangle(0, 0, this.width, this.height);
+        this.rect = two.makeRectangle(0, 0, this.size, this.size);
         this.rect.opacity = 0.75;
         this.rect.linewidth = this.linewidth
 
-        this.rect_content = two.makeRectangle(0, -(height - this.linewidth)/2, width - this.linewidth, 0);
+        this.rect_content = two.makeRectangle(0, -(size - this.linewidth)/2, size- this.linewidth, 0);
         this.rect_content.fill = this.color
         this.rect_content.noStroke()
 
-        this.rect_search = two.makeRectangle(0, -(height - this.linewidth)/2 + ((this.height - 5) / this.max_elements)/2, width - this.linewidth, (this.height - 5) / this.max_elements)
+        this.rect_search = two.makeRectangle(0, -(size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2, size - this.linewidth, (this.size - 5) / this.max_elements)
         this.rect_search.fill = "rgba(0, 0, 0, 0.5)"
         this.rect_search.noStroke()
         this.rect_search.visible = false
@@ -54,8 +52,19 @@ class Frame {
         return this.elements[indx][0]
     }
 
+
+    getValues() {
+        var ret = []
+        for (var i = 0; i < this.elements.length; i++) {
+            ret.push(this.elements[i][0])
+        }
+        return ret
+    }
+
     
     setPosition(x, y) {
+        this.x = x
+        this.y = y
         this.group.translation.set(x, y)
     }
 
@@ -87,23 +96,32 @@ class Frame {
     }
 
 
+    copy(frame) {
+        this.fill(frame.getValues())
+        this.setColor(frame.color)
+    }
+
+
     _resetRectSearch() {
-        this.rect_search.position.y = -(this.height - this.linewidth)/2 + ((this.height - 5) / this.max_elements)/2
+        this.rect_search.position.y = -(this.size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2
         this.rect_search.visible = false
     }
 
 
     resetFrame() {
-        var ret = this.elements
+        var ret = this.getValues()
+
         this.elements = []
-        //cambiare colore
+        this.rect_content.position.y += (this.rect_content.height)/2
+        this.rect_content.height = 0
 
         return ret
     }
 
 
     fill(new_elements) {
-        var offset = (this.height) / this.max_elements
+        this.elements = []
+        var offset = (this.size) / this.max_elements
         this.rect_content.height = (offset * new_elements.length) - this.linewidth
         this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2
 
@@ -116,46 +134,45 @@ class Frame {
     }
 
 
-    addElement(indx, element) {
-        var offset = (this.height - this.linewidth) / this.max_elements
+    addElement(element) {
+        var offset = (this.size - this.linewidth) / this.max_elements
         this.rect_content.height += offset
         this.rect_content.position.y +=  offset / 2
 
-        var text = this.two.makeText(element, this.rect_content.position.x, (indx - (Math.floor(this.max_elements / 2))) * offset)
+        var text = this.two.makeText(element, 0, (this.size - this.linewidth)/2 - (this.max_elements - this.elements.length - 0.5)*offset)
         text.visible = this.view
         this.group.add(text)
 
-        this.elements.splice(indx, 0, [element, text]);
+        this.elements.push([element, text]);
     }
 
 
-    addElementAnimation(indx, element, time) {
-        var group = new TWEEN.Group()
-
-        this.addElement(indx, element)
-
-        this.rect_search.position.y += (this.rect_search.height * indx)
-        this.rect_search.visible = true
-
-        const tween = new TWEEN.Tween(this.rect_search, group).to({opacity: 0}, time / 2)
-        const tween2 = new TWEEN.Tween(this.rect_search, group).to({opacity: 1}, time / 2)
+    addElementAnimation(element, time) {
+        const tween = new TWEEN.Tween(this.rect_search).to({opacity: 0}, time / 2)
+        tween.onStart(() => {
+            this.addElement(element)
+            this.rect_search.position.y = (this.size - this.linewidth)/2 - (this.max_elements - this.elements.length + 0.5)*(this.size - this.linewidth) / this.max_elements;
+            this.rect_search.visible = true;
+        })
+        const tween2 = new TWEEN.Tween(this.rect_search).to({opacity: 1}, time / 2)
         tween.chain(tween2)
         tween2.onComplete(() => {this._resetRectSearch()})
 
-        tween.start()
-        return group
+        return [tween, tween2]
     }
 
 
     removeElement(indx) {
-        console.log(indx)
         var element = this.elements.splice(indx, 1);
         var value = element[0][0]
         var text = element[0][1]
 
-        var height_removed = (this.height - this.linewidth) / this.max_elements
+        var height_removed = (this.size - this.linewidth) / this.max_elements
         this.rect_content.height -= height_removed
         this.rect_content.position.y -=  height_removed / 2
+        for (var i = indx; i < this.elements.length; i++) {
+            this.elements[i][1].position.y -= height_removed
+        }
 
         text.remove()
 
@@ -164,18 +181,16 @@ class Frame {
 
 
     removeElementAnimation(indx, time) {
-        var group = new TWEEN.Group()
-
-        this.rect_search.position.y += (this.rect_search.height * indx)
-        this.rect_search.visible = true
-    
-        const tween = new TWEEN.Tween(this.rect_search, group).to({opacity: 0}, time / 2)
-        const tween2 = new TWEEN.Tween(this.rect_search, group).to({opacity: 1}, time / 2)
+        const tween = new TWEEN.Tween(this.rect_search).to({opacity: 0}, time / 2)
+        tween.onStart(() => {
+            this.rect_search.position.y += (this.rect_search.height * indx);
+            this.rect_search.visible = true;
+        })
+        const tween2 = new TWEEN.Tween(this.rect_search).to({opacity: 1}, time / 2)
         tween.chain(tween2)
         tween2.onComplete(() => {this._resetRectSearch(); this.removeElement(indx)})
 
-        tween.start()
-        return group
+        return [tween, tween2]
     }
 
 

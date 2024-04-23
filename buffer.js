@@ -1,36 +1,44 @@
 class Buffer {
-    constructor(length, frame_width, height, max_elements, two) {
+    constructor(x, y, length, frameSize, two) {
 
         this.group = new Two.Group();
 
         this.two = two
 
-        this.frame_width = frame_width
-        this.height = height
+        this.x = x
+        this.y = y
+        this.frame_size = frameSize
         this.length = length
-
+        this.spaceBetween = SPACE_BETWEEN_FRAMES;
         this.frames = []
 
-        this.linewidth = 5
-        this.rect = two.makeRectangle(0, 0, (length - 1) * frame_width, height);
-        this.rect_output = two.makeRectangle((length - 1) * frame_width, 0, frame_width, height)
-        this.rect.linewidth = this.linewidth
-        this.rect_output.linewidth = this.linewidth
+        this.linewidth = THICK_LINE
 
-        this.output_frame = new Frame(frame_width, height, "rgb(255, 0, 0)", max_elements, two)
-        this.output_frame.setPosition((length - 1) * frame_width, 0)
-        this.max_elements = max_elements
+        this.sorting = false
 
-        this.group.add(this.rect);
-        this.group.add(this.rect_output);
-        this.group.add(this.output_frame.group)
+        var spaceOutputFrame = 10
+        var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
+        var framePosition = x - totalWidth/2 + frameSize/2;
+        for (var i = 0; i < length; i++) {
+            var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two)
+            newFrame.setView(1)
+            this.frames.push(newFrame)
+            this.group.add(newFrame.group)
+            framePosition += frameSize + this.spaceBetween;
+        }
+
+        framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES
+        this.outputFrame = new Frame(framePosition, y, frameSize, "rgb(255, 0, 0)", MAX_ELEMENTS_PER_FRAME, two)
+        var txt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, fontSizeSmall);
+        this.group.add(this.outputFrame.group)
+        this.group.add(txt)
 
         two.add(this.group)
     }
 
 
-    getToSort() {
-        return 1
+    getSorting() {
+        return this.sorting
     }
 
 
@@ -42,26 +50,35 @@ class Buffer {
     read(frames) {
         for (var i = 0; i < frames.length; i++) {
             var frame = frames[i]
-            frame.setPosition((this.group.position.x) - (((this.length / 2) - i) * this.frame_width), this.group.position.y)
-            this.group.add(frame)
-            this.frames.push(frame)
+            this.frames[i].copy(frame)
         }
     }
 
 
-    writeFromTo(frame, indx) {
+    writeFromTo(frameIndx, indx) {
+        var frame = this.frames[frameIndx]
         var value = frame.getValue(indx)
         frame.removeElement(indx)
-        this.output_frame.addElement(frame.elements.length - 1, value)
+        this.outputFrame.addElement(this.outputFrame.elements.length, value)
     }
 
 
-    writeFromToAnimation(frame, indx) {
+    writeFromToAnimation(frameIndx, indx) {
+        var frame = this.frames[frameIndx]
         var value = frame.getValue(indx)
-        const rem_group = frame.removeElementAnimation(indx, 1000)
-        const add_group = this.output_frame.addElementAnimation(frame.elements.length - 1, value, 500)
 
-        return rem_group
+        const removeTweens = frame.removeElementAnimation(indx, 1000)
+        const waitTweens = new TWEEN.Tween(null).to(null, 200)
+        const addTweens = this.outputFrame.addElementAnimation(value, 500)
+        removeTweens[removeTweens.length - 1].chain(waitTweens)
+        waitTweens.chain(addTweens[0])
+
+        return [removeTweens[0], addTweens[addTweens.length - 1]]
     }
 
+
+    sort() {
+        this.sorting = true
+
+    }
 }
