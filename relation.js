@@ -482,8 +482,8 @@ class Relation {
 
         // Itera tutti i frame in ordine inverso. Quando incontri emptyFrame inizia a shiftare
         // tutti di una posizione in avanti. Quando arrivi a startingFrame, shifta anche lui
-        // e poi fermati. Se prima di arrivare a startingFrame trovi un frame vuoto,
-        // fermati e basta senza shiftarlo.
+        // e poi fermati. Se prima di arrivare a startingFrame trovi un frame appartenente ad
+        // availableFrames, fermati e basta senza shiftarlo.
 
         var shifting = false;
         var currentFrame;
@@ -498,8 +498,8 @@ class Relation {
                 }
             }
             if (shifting) {
-                // se il frame prima non e' vuoto, scambialo con l'empty frame
-                if (this.relationArray[i-1].elements.length > 0) {
+                // se il frame prima non e' vuoto e non e' in availableFrames, scambialo con l'empty frame
+                if (this.relationArray[i-1].elements.length > 0 && !this.availableFrames.includes(this.relationArray[i-1])) {
                     this.swapFrames(i-1, i);
                     await new Promise(r => setTimeout(r, 200));
 
