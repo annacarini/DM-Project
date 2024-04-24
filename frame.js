@@ -55,7 +55,9 @@ class Frame {
 
     
     setPosition(x, y) {
-        this.group.translation.set(x, y)
+        this.x = x;
+        this.y = y;
+        this.group.translation.set(x, y);
     }
 
 
@@ -93,9 +95,15 @@ class Frame {
 
 
     resetFrame() {
-        var ret = this.elements
-        this.elements = []
+        var ret = this.elements;
+        for (let i=0; i < this.elements.length; i++) {
+            this.elements[i][1].remove();
+            //this.elements[i][1].opacity = 0.4;
+        }
+        this.elements = [];
+        
         //cambiare colore
+        //this.rect_content.opacity = 0;  // TEMPORANEO
 
         return ret
     }

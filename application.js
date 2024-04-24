@@ -199,17 +199,31 @@ function elaborateNode() {
 
 
 
-// TEMPORANEI per testare l'highlighting
+// TEMPORANEI per test
 function divideRelation() {
-    if (relation == null)
-        return;
+    if (relation == null) return;
     relation.splitGroup(bufferSize - 1);
 }
 function mergeRelation() {
-    if (relation == null)
-        return;
+    if (relation == null) return;
     relation.mergeSiblings();
 }
+function removeFirst() {
+    if (relation == null) return;
+    relation.removeTheFirstFraneOfEachSibling();
+}
+function readCurrentGroup() {
+    if (relation == null) return;
+    var res = relation.readCurrentGroup();
+    console.log(res);
+}
+function readNextOfCurrentGroup() {
+    if (relation == null) return;
+    var res = relation.readOnePageOfGroup(1);
+    console.log(res);
+}
+
+
 
 
 

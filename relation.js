@@ -3,9 +3,14 @@ class Relation {
     // Relazione, espressa come albero
     relation = new Tree([]).root;                // l'array vuoto passato come parametro e' il campo "value" del nodo
 
+    // Relazione espressa come array (serve comunque)
+    relationArray = [];
+
     // Nodo attuale, all'inizio e' tutta la relazione
     currentGroup;
 
+    // Frame liberi in cui andare a scrivere l'output
+    availableFrames = [];
 
     // Rettangoli (solo bordo) che servono ad evidenziare il gruppo preso in considerazione
     highlighters = [];  
@@ -44,10 +49,11 @@ class Relation {
             // Crea il frame
             var newFrame = new Frame(framePositionX, framePositionY, this.frameSize, this.frameSize, this.frameColor, MAX_ELEMENTS_PER_FRAME, two);
             newFrame.fill(vals);    // Scrivi i valori nel frame
-            newFrame.setView(0);    // Fai in modo che i valori non si vedono
+            //newFrame.setView(0);    // Fai in modo che i valori non si vedono
 
-            // Aggiungi il frame alla lista
+            // Aggiungi il frame all'albero e alla lista
             this.relation.value.push(newFrame);
+            this.relationArray.push(newFrame);
 
 
             // Prepara posizione per il prossimo frame:
@@ -119,8 +125,10 @@ class Relation {
         for (var i = this.highlighters.length - 1; i >= 0; i--) {
             this.highlighters[i].remove();
         }
+        this.highlighters = [];
 
-        var group = groupNode.value;
+        // prendi tutti i valori di questo nodo e di tutti i suoi discendenti
+        var group = groupNode.getValueOfAllChildren();
 
         var firstFrameOfRow = group[0];
         var lastFrameOfRow = group[0];
@@ -228,7 +236,7 @@ class Relation {
         this.currentGroup.value = [];
 
         // Imposta il primo gruppo come nodo attuale
-        this.setCurrentGroup(this.currentGroup.children[0]);
+        this.setCurrentGroup(this.currentGroup.children[1]);
     }
 
 
@@ -249,6 +257,11 @@ class Relation {
         // Metti questi frame come "value" del nodo padre
         this.currentGroup.parent.value = frames;
 
+        // Ri-ordina i frame rispetto alla y e rispetto alla x, in modo da averli nello stesso
+        // ordine in cui appaiono graficamente (perche' la funzione shiftFramesByOne incasina
+        // tutto, ma servono ordinati per disegnare l'highlighter bene)
+        this.currentGroup.parent.value.sort( this.compareFramesByPosition );
+
         // Elimina i figli
         this.currentGroup.parent.children = [];
 
@@ -260,6 +273,24 @@ class Relation {
         this.changeGroupColor(this.currentGroup, color);
     }
 
+    // Serve per ordinare i frame in base alla loro posizione
+    compareFramesByPosition( frame1, frame2 ) {
+        if (frame1.y < frame2.y) {  // frame 1 e' su una riga sopra, quindi va messo prima
+            return -1;
+        }
+        else if (frame1.y > frame2.y) {  // frame 1 e' su una riga dopo, quindi va messo dopo
+            return 1;
+        }
+        else {                             // sono sulla stessa riga
+            if (frame1.x < frame2.x) {      // frame 1 e' su una colonna piu' a sx, quindi va messo prima
+                return -1;
+            }
+            else if (frame1.x > frame2.x) {      // frame 1 e' su una colonna piu' a dx, quindi va messo dopo
+                return 1;
+            }
+        }
+        return 0;
+    }
 
 
 
@@ -293,4 +324,195 @@ class Relation {
         return "hsl(" + col[0] + ',' + col[1] + '%,' + col[2] + '%)';
     }
 
+
+
+
+    /**************** OPERAZIONI DI SCRITTURA E LETTURA ****************/
+
+
+    /*
+        IDEA:
+
+        readCurrentGroup()
+            La funzione readCurrentGroup() viene usata quando bisogna ordinare un singolo gruppo, mettendolo
+            tutto dentro il buffer. Questa funzione restituisce tutto il gruppo, poi svuota i suoi frame, e li
+            inserisce dentro l'array availableFrames (che ha prima svuotato?).
+
+        readOnePageOfGroup(index)
+            La funzione readOnePageOfGroup(index) viene usata durante la fase di merge-sort dei siblings.
+            Ti restituisce il contenuto della prima pagina non vuota del sibling "index". Se il sibling e' gia'
+            tutto vuoto, ti restituisce null. Poi svuota questa pagina e la inserisce dentro availableFrames.
+            Poi shifta tutti i sibling in modo da riportare "all'inizio" il frame vuoto.
+
+
+
+        NOTA: E' importante che un frame non venga tolto dall'array availableFrames fino a quando l'operazione
+        su quel determinato gruppo (o gruppo di siblings) non e' conclusa!!
+
+            Esempi:
+
+            -   Quando ordini un gruppo svuoti tutti i suoi frame, metti i frame svuotati dentro availableFrames,
+                poi copi i frame originali nel buffer e li ordini. Poi li scrivi uno per uno dentro i frame di
+                availableFrames (prendendo ogni volta il primo frame libero che trovi). Solo quando hai finito di
+                scriverli tutti puoi "svuotare" l'array availableFrames (il motivo si capisce col secondo esempio).
+
+            -   Quando stai facendo il merge-sort, devi prendere un frame da uno dei sibling. Questo frame deve
+                essere un frame PIENO, ma NON DEVE essere un frame su cui hai gia' scritto l'output! Quindi quello
+                che fai e': scorri tutti i frame di quel sibling, e appena trovi un frame che NON E' anche nell'
+                array availableFrames, allora sai che quel frame ha un contenuto ancora da ordinare. Lo restituisci,
+                poi svuoti il frame e lo aggiungi ad availableFrames. Intanto scrivi gli output nei frame liberi di
+                availableFrames, e quando hai finito puoi svuotare availableFrames e fare il merge dei siblings.
+
+
+    */
+
+
+    readCurrentGroup() {
+        var framesToReturn = [];
+
+        // svuota availableFrames (serve farlo?)
+        this.availableFrames = [];
+        
+        for (let i = 0; i < this.currentGroup.value.length; i++) {
+            // copia il frame dentro framesToReturn
+            framesToReturn.push({...this.currentGroup.value[i]});      // DEEP COPY: "{...oggetto}" copia veramente l'oggetto invece di copiare il riferimento
+            // svuota il frame
+            this.currentGroup.value[i].resetFrame();
+            // metti il frame vuoto dentro availableFrames cosi' sai che puoi scriverci dentro
+            this.availableFrames.push(this.currentGroup.value[i]);
+        }
+        return framesToReturn;
+    }
+
+    readOnePageOfGroup(index) {
+        if (this.currentGroup.parent == null) return null;
+        var siblings = this.currentGroup.parent.children;
+
+        if (index >= siblings.length) return null;
+        var sib = siblings[index];
+
+        var frameToReturn = null;   // se hai gia' letto tutto il sibling, restituisce null
+
+        for (let i = 0; i < sib.value.length; i++) {
+
+            // se trovi un frame di questo sibling che non e' dentro availableFrames
+            if (!this.availableFrames.includes(sib.value[i])) {
+
+                // copia il frame
+                frameToReturn = {...sib.value[i]}
+
+                // svuota il frame
+                sib.value[i].resetFrame();
+
+                // metti il frame vuoto dentro availableFrames cosi' sai che puoi scriverci dentro
+                this.availableFrames.push(sib.value[i]);
+
+                // shifta tutto
+                this.shiftFramesByOne(sib.value[i]);
+
+                break;
+            }
+        }
+        return frameToReturn;
+    }
+
+
+
+
+
+
+    // TEMPORANEO, per testare lo scorrimento dei frame
+    removeTheFirstFraneOfEachSibling() {
+        if (this.currentGroup.parent == null) return;   // facciamo solo se ha dei sibling
+
+        // Prendi tutti i siblings
+        var siblings = this.currentGroup.parent.children;
+
+        // Resetta il primo frame di ogni sibling, e salvalo dentro removedFrames
+        for (let i = 0; i < siblings.length; i++) {
+            var first = siblings[i].value[0];          // [shift sarebbe tipo "pop left", cioe' rimuove il primo elemento di un array e lo restituisce]
+            first.resetFrame();
+            this.availableFrames.push(first);
+        }
+
+        
+        // shifta tutti i frame a partire dal secondo in poi
+        for (let i = 0; i < this.availableFrames.length; i++) {
+            //console.log("removing empty space created by group: " + i);
+            this.shiftFramesByOne(this.availableFrames[i]);
+        }
+
+        // highlight dei sibling
+        this.highlightGroup(this.currentGroup.parent);
+
+    }
+
+
+    async shiftFramesByOne(emptyFrame) {
+        if (this.currentGroup.parent == null) return;
+
+        // Shifta solo i sibling attuali, quindi parti dal primo frame del primo sibling
+        var startingFrame = this.currentGroup.parent.children[0].value[0];
+
+        // Se emptyFrame e' proprio lo startingFrame, non fare nulla
+        if (emptyFrame == startingFrame) {
+            return;
+        }
+
+        // Itera tutti i frame in ordine inverso. Quando incontri emptyFrame inizia a shiftare
+        // tutti di una posizione in avanti. Quando arrivi a startingFrame, shifta anche lui
+        // e poi fermati. Se prima di arrivare a startingFrame trovi un frame vuoto,
+        // fermati e basta senza shiftarlo.
+
+        var shifting = false;
+        var currentFrame;
+        for (var i = this.relationArray.length-1; i > 0; i--) {
+
+            //console.log(i);
+            currentFrame = this.relationArray[i];
+
+            if (!shifting) {
+                if (currentFrame == emptyFrame && currentFrame != startingFrame) {
+                    shifting = true;
+                }
+            }
+            if (shifting) {
+                // se il frame prima non e' vuoto, scambialo con l'empty frame
+                if (this.relationArray[i-1].elements.length > 0) {
+                    this.swapFrames(i-1, i);
+                    await new Promise(r => setTimeout(r, 200));
+
+                    // se il frame con cui hai scambiato era lo starting frame, fermati
+                    if (this.relationArray[i] == startingFrame) {
+                        console.log("trovato starting frame, posizione: " + i);
+                        break;
+                    }
+                }
+                else {
+                    break;
+                }
+
+
+            }
+
+        }
+    }
+
+    // Questa scambia due frame, sia cambiando il loro indice dentro relationArray, sia
+    // scambiando le loro posizioni
+    swapFrames(i, j) {
+        //console.log("swapping " + i + " and " + j);
+        var pos_i = [this.relationArray[i].x, this.relationArray[i].y];
+        var pos_j = [this.relationArray[j].x, this.relationArray[j].y];
+        var frame_i = this.relationArray[i];
+        var frame_j = this.relationArray[j];
+
+        // scambia le posizioni
+        this.relationArray[i].setPosition(pos_j[0], pos_j[1]);
+        this.relationArray[j].setPosition(pos_i[0], pos_i[1]);
+
+        // scambiali nell'array
+        this.relationArray[i] = frame_j;
+        this.relationArray[j] = frame_i;
+    }
 }
