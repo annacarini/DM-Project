@@ -345,6 +345,12 @@ class Relation {
             Poi shifta tutti i sibling in modo da riportare "all'inizio" il frame vuoto.
 
 
+        write(frame)
+            Questa funzione copia il frame passato in input nel primo frame vuoto che trova dentro availableFrame.
+            Copia sia il contenuto (elements) che il colore (changeColor).
+            Se ci riesce restituisce true, altrimenti (se per esempio non ci sono frame disponibili) restituisce
+            false.
+
 
         NOTA: E' importante che un frame non venga tolto dall'array availableFrames fino a quando l'operazione
         su quel determinato gruppo (o gruppo di siblings) non e' conclusa!!
@@ -414,6 +420,21 @@ class Relation {
             }
         }
         return frameToReturn;
+    }
+
+    write(frame) {
+        var res = false;
+        for (let i = 0; i < this.availableFrames.length; i++) {
+            if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
+                // scrivi gli elementi
+                this.availableFrames[i].fill(frame.elements);
+                // cambia il colore
+                this.availableFrames[i].setColor(frame.color);
+                res = true;
+                break;
+            }
+        }
+        return res;
     }
 
 

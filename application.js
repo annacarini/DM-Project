@@ -222,7 +222,12 @@ function readNextOfCurrentGroup() {
     var res = relation.readOnePageOfGroup(1);
     console.log(res);
 }
-
+function writeSomething() {
+    if (relation == null) return;
+    var frameToWrite = new Frame(0,0,100,100,"gray",5,new Two());
+    frameToWrite.elements.push("PROVA");
+    console.log(relation.write(frameToWrite));
+}
 
 
 
