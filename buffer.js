@@ -14,7 +14,10 @@ class Buffer {
 
         this.linewidth = THICK_LINE
 
-        this.sorting = false
+        this.sortingStatus = 0
+        this._virtualFrames = Array(length, [])
+        this._virtualOutputFrame = []
+        this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false)
 
         var spaceOutputFrame = 10
         var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
@@ -47,10 +50,82 @@ class Buffer {
     }
 
 
+    _findMin() {
+        var frameIndx = 0
+        var indx = 0
+        var min = Infinity
+
+        for (var i = 0; i < this.frames.length; i++) {
+            var fMin, fIndx = this.frames[i].findMin()
+            if (fMin < min) {
+                min = fMin
+                indx = fIndx
+                frameIndx = i
+            }
+        }
+        return frameIndx, indx
+    }
+
+
+    _virtualFindMin() {
+        var frameIndx = 0
+        var indx = 0
+        var min = Infinity
+
+        for (var i = 0; i < this._virtualFrames.length; i++) {
+            var frame = this._virtualFrames[i]
+            for (var j = 0; j < frame.length; j++) {
+                if (frame[j] < min) {
+                    min = frame[j]
+                    indx = j
+                    frameIndx = i
+                }
+            }
+        }
+        return [frameIndx, indx]
+    }
+
+
+    _checkToRefill() {
+        for (var i = 0; i < this.frames.length; i++) {
+            if (this.frames[i].elements.length == 0) {
+                if (this.sortRefilled[i])
+                    return true
+            }
+        }
+        return false
+    }
+
+
+    _checkVirtualEmptiness() {
+        for (var i = 0; i < this._virtualFrames.length; i++) {
+            if (this._virtualFrames[i].length)
+                return false
+        }
+        return true
+    }
+
+    _checkVirtualToRefill() {
+        for (var i = 0; i < this._virtualFrames.length; i++) {
+            if (!this._virtualFrames[i].length && this.frameRefilled[i])
+                return i + 1
+        }
+        return false
+    }
+
+    _checkVirtualToEmpty() {
+        if (this._virtualOutputFrame.length == MAX_ELEMENTS_PER_FRAME)
+            return true
+        return false
+    }
+
+
     read(frames) {
         for (var i = 0; i < frames.length; i++) {
             var frame = frames[i]
             this.frames[i].copy(frame)
+            this._virtualFrames[i] = frame.getValues()
+            this.frameRefilled[i] = true
         }
     }
 
@@ -65,7 +140,7 @@ class Buffer {
 
     writeFromToAnimation(frameIndx, indx) {
         var frame = this.frames[frameIndx]
-        var value = frame.getValue(indx)
+        var value = this._virtualFrames[frameIndx][indx]
 
         const removeTweens = frame.removeElementAnimation(indx, 1000)
         const waitTweens = new TWEEN.Tween(null).to(null, 200)
@@ -77,8 +152,34 @@ class Buffer {
     }
 
 
-    sort() {
-        this.sorting = true
+    writeFromOutputToMain() {
+        this.outputFrame.resetFrame()
+        this._virtualOutputFrame = []
+    }
 
+
+    _virtualWriteFromToAnimation(frameIndx, indx) {
+        var value = this._virtualFrames[frameIndx][indx]
+
+        this._virtualFrames[frameIndx].splice(indx, 1)
+        this._virtualOutputFrame.push(value)
+    }
+
+
+    sort() {
+        var tweens = []
+        this.sortingStatus = this._checkVirtualEmptiness() + (this._checkVirtualToRefill() << 2) + (this._checkVirtualToEmpty() * 2)
+        while (!this.sortingStatus) {
+            var ret = this._virtualFindMin()
+            var frameIndx = ret[0]
+            var indx = ret[1]
+            var writeTweens = this.writeFromToAnimation(frameIndx, indx)
+            if (tweens.length)
+                tweens[tweens.length - 1].chain(writeTweens[0])
+            tweens.push(writeTweens[0], writeTweens[1])
+            this._virtualWriteFromToAnimation(frameIndx, indx)
+            this.sortingStatus = this._checkVirtualEmptiness() + (this._checkVirtualToRefill() << 2) + (this._checkVirtualToEmpty() * 2)
+        }
+        return tweens
     }
 }

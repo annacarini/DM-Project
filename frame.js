@@ -39,6 +39,12 @@ class Frame {
 
         this.setPosition(x, y);
 
+        this._yPosition = []
+        var offset = (this.size - this.linewidth)/this.max_elements
+        for (var i = 0; i < this.max_elements; i++) {
+            this._yPosition.push(offset * (i - (this.max_elements - 1)/2))
+        }
+
 
         // PROVA CLICK HANDLER (funziona!), nota: bisogna per forza fare two.update() prima di assegnare l'event listener, se no non funziona!!
         two.update();
@@ -111,8 +117,11 @@ class Frame {
     resetFrame() {
         var ret = this.getValues()
 
+        for (var i = 0; i < this.elements.length; i++) {
+            this.elements[i][1].remove()
+        }
         this.elements = []
-        this.rect_content.position.y += (this.rect_content.height)/2
+        this.rect_content.position.y = - (this.rect.height - this.linewidth) / 2
         this.rect_content.height = 0
 
         return ret
@@ -126,7 +135,7 @@ class Frame {
         this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2
 
         for (var i = 0; i < new_elements.length; i++) {
-            var text = this.two.makeText(new_elements[i], this.rect_content.position.x, (i - (Math.floor(this.max_elements / 2))) * offset)
+            var text = this.two.makeText(new_elements[i], this.rect_content.position.x, (i - ((this.max_elements - 1) / 2)) * offset)
             text.visible = this.view
             this.elements.push([new_elements[i], text]);
             this.group.add(text)
@@ -139,7 +148,7 @@ class Frame {
         this.rect_content.height += offset
         this.rect_content.position.y +=  offset / 2
 
-        var text = this.two.makeText(element, 0, (this.size - this.linewidth)/2 - (this.max_elements - this.elements.length - 0.5)*offset)
+        var text = this.two.makeText(element, 0, (this.elements.length - ((this.max_elements - 1) / 2)) * offset)
         text.visible = this.view
         this.group.add(text)
 
@@ -156,7 +165,7 @@ class Frame {
         })
         const tween2 = new TWEEN.Tween(this.rect_search).to({opacity: 1}, time / 2)
         tween.chain(tween2)
-        tween2.onComplete(() => {this._resetRectSearch()})
+        tween2.onComplete(() => {this._resetRectSearch();})
 
         return [tween, tween2]
     }
