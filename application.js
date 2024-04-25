@@ -7,8 +7,27 @@ var relationSize = 9;
 var buffer = null;
 var relation = null;
 
+const States = {
+	Start: "Start",
+	GroupToSort: "Current group is not sorted",
+	GroupInBuffer: "Current group loaded in buffer, waiting to be sorted",
+	OutputFrameFullSorting: "Sorting, the output frame is full",
+    GroupSorted: "Current group is sorted",
+    GroupToMerge: "Current group has children that must be merge-sorted",
+    ChildrenInBuffer: "Children of current group are in the buffer, waiting to be merge-sorted",
+    OneEmptyFrameInBuffer: "One empty frame in buffer during merge-sort",
+    OutputFrameFullMerging: "Merging, the output frame is full",
+    Finish: "Finished"
+}
+
+var applicationState = States.Start;    // Tiene lo stato attuale dell'applicazione
+var playButton = null;
+
+
 
 // PARAMETRI PER GRAFICA
+
+var two;
 
 // Misure dello schermo
 var windowW = window.innerWidth;
@@ -70,6 +89,8 @@ function onBodyLoad() {
         relationSize = event.target.value;
         document.getElementById("relation_size_value").innerHTML = relationSize;
     };
+
+    playButton = document.getElementById("play_button");
 }
 
 
@@ -115,7 +136,7 @@ function startSimulation() {
 
 
     // Avvia Two
-    var two = new Two({
+    two = new Two({
         type: Two.Types.svg,
         fullscreen: true,
         //fitted: true,
@@ -157,8 +178,8 @@ function startSimulation() {
     two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
     
 
-    // PROVA BUFFER
-    buffer = new Buffer(two, bufferSize, upperPart.center.x, upperPart.center.y - 15, frameSize);
+    // PROVA BUFFER         constructor(x, y, length, frameSize, two)
+    buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
 
     // PROVA RELAZIONE
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
@@ -199,6 +220,202 @@ function elaborateNode() {
 
 
 
+// FUNZIONE PLAY
+function play() {
+    if (relation == null || buffer == null || playButton == null) return;
+
+    // disattiva pulsante play
+    playButton.disabled = true; 
+
+    switch (applicationState) {
+        
+        case States.Start:
+            relation.highlightGroup(relation.getCurrentGroup(), () => {
+                applicationState = States.GroupToSort;
+                callback();
+            });
+            break;
+
+        case States.GroupToSort:
+            var currentGroup = relation.getCurrentGroup();
+            // Se il gruppo non entra nel buffer, splittalo e rimani in questo stato
+            if (currentGroup.value.length > bufferSize - 1) {
+                relation.splitGroup(bufferSize - 1, () => {
+                    callback();
+                });
+            }
+            // Altrimenti, leggi il contenuto del primo gruppo e scrivilo nel buffer
+            else {
+                var frames = relation.readCurrentGroup();
+                // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
+                start_x = [];
+                start_y = [];
+                end_x = [];
+                end_y = [];
+                start_size = [];
+                end_size = [];
+                color = [];
+                var animationLength = 1000;
+                for (var i = 0; i < frames.length; i++) {
+                    start_x.push(frames[i].x);
+                    start_y.push(frames[i].y);
+                    let endPos = buffer.getPositionOfFrame(i);
+                    end_x.push(endPos[0]);
+                    end_y.push(endPos[1]);
+                    start_size.push(frames[i].size);
+                    end_size.push(frameSize);
+                    color.push(frames[i].color);
+                }
+                animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
+                    // Quando terminano le animazioni, scrivi i dati nel buffer
+                    buffer.read(frames, () => {
+                        applicationState = States.GroupInBuffer;
+                        callback();
+                    });
+                })
+            }
+            break;
+
+        case States.GroupInBuffer:
+            // Avvia il sort
+            buffer.fakeSort(() => {
+                applicationState = States.OutputFrameFullSorting;
+                callback();
+            });
+            break;
+    
+        case States.OutputFrameFullSorting:
+            // Prendi l'output frame
+            var frame = buffer.flushOutputFrame();
+            // Copia l'output frame nella relazione
+            relation.writeWithAnimation(frame, () => {
+                // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
+                if (buffer.bufferContainsSomething()) {
+                    applicationState = States.GroupInBuffer;
+                }
+                else {
+                    applicationState = States.GroupSorted;
+                }
+                callback();
+            });
+
+        case States.GroupSorted:
+            // Controlla se questo gruppo e' la radice (significa che hai finito tutto)
+            var currentGroup = relation.getCurrentGroup();
+            if (currentGroup.parent == null) {
+                applicationState = States.Finish;
+            }
+            // Altrimenti vedi se ha un fratello
+            else {
+                var next_sibling = relation.getNextSibling();
+                // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
+                if (next_sibling == null) {
+                    relation.setCurrentGroup(currentGroup.parent);
+                    applicationState = States.GroupToMerge;
+                }
+                else {
+                    relation.setCurrentGroup(next_sibling);
+                    applicationState = States.GroupToSort;
+                }
+            }
+
+        default:
+            break;
+    }
+
+    console.log("I'm in state: " + applicationState);
+}
+
+function callback() {
+    // attiva pulsante play
+    playButton.disabled = false; 
+
+    //await new Promise(r => setTimeout(r, 500));
+    //play();
+}
+
+
+// ANIMAZIONI
+function animate() {
+    TWEEN.update();
+    //two.update();
+	requestAnimationFrame(animate);
+    //console.log(frame.rect_search.position.x)
+}
+requestAnimationFrame(animate)
+
+
+
+// Funzione che fa apparire un quadrato che si sposta da una pos iniziale a una finale, poi
+// quando l'animazione termina elimina il quadrato e chiama la callback che gli viene passata
+function animateOneSquare(start_x, start_y, end_x, end_y, start_size, end_size, color, time, animationCompleteCallback = null) {
+
+    // Crea il quadrato
+    var square = two.makeRectangle(start_x, start_y, start_size, start_size);
+    square.fill = color;
+    square.noStroke();
+    
+    var values = { x: start_x, y: start_y, size: start_size };
+    const tween = new TWEEN.Tween(values)
+        .to({ x: end_x, y: end_y, size: end_size }, time)
+        .onUpdate(function() {
+            square.translation.set(values.x, values.y);
+            square.scale = values.size/start_size;
+        })
+        .onComplete(() => {
+            // elimina il quadrato
+            square.remove();
+            // se c'e', chiama la callback
+            if (animationCompleteCallback != null) animationCompleteCallback();
+        });
+
+    tween.start();
+}
+
+// Come animateOneSquare, solo che start_x, start_y, end_x, end_y, size, e color ora
+// sono degli array (devono essere tutti della stessa lunghezza)
+function animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, time, animationCompleteCallback = null) {
+
+    var numberOfSquares = start_x.length;
+
+    // Crea i quadrati e l'array con le posizioni attuali
+    var squares = [];
+    var currentValues = [];     // array di dizionari contenenti: x, y, size
+    var endValues = [];
+    for (var i = 0; i < numberOfSquares; i++) {
+        var sq = two.makeRectangle(start_x[i], start_y[i], start_size[i], start_size[i]);
+        sq.fill = color[i];
+        sq.noStroke();
+        squares.push(sq);
+        currentValues.push({ x: start_x[i], y: start_y[i], size:start_size[i] });
+        endValues.push({ x: end_x[i], y: end_y[i], size:end_size[i] });
+    }
+    const tween = new TWEEN.Tween(currentValues)
+        .to(endValues, time)
+        .onUpdate(function() {
+            for (var i = 0; i < numberOfSquares; i++) {
+                squares[i].translation.set(currentValues[i].x, currentValues[i].y);
+                squares[i].scale = currentValues[i].size/start_size[i];
+            }
+            
+        })
+        .onComplete(() => {
+            // elimina i quadrati
+            for (var i = 0; i < numberOfSquares; i++) {
+                squares[i].remove();
+            }
+            // se c'e', chiama la callback
+            if (animationCompleteCallback != null) animationCompleteCallback();
+        });
+
+    tween.start();
+}
+
+
+
+
+
+
 // TEMPORANEI per test
 function divideRelation() {
     if (relation == null) return;
@@ -224,7 +441,7 @@ function readNextOfCurrentGroup() {
 }
 function writeSomething() {
     if (relation == null) return;
-    var frameToWrite = new Frame(0,0,100,100,"gray",5,new Two());
+    var frameToWrite = new Frame(0,0,frameSize,"gray",MAX_ELEMENTS_PER_FRAME,new Two());       // (x, y, size, color, max_elements, two)
     frameToWrite.elements.push("PROVA");
     console.log(relation.writeWithAnimation(frameToWrite));
 }

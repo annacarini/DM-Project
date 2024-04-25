@@ -20,7 +20,10 @@ class Relation {
     frameColor = "#6fdcff";
     highlighterColor = "#2546cc";
     highlighterThickness = VERY_THICK_LINE;
+
     
+    // CALLBACK per informare l'applicazione che ha fatto
+    applicationCallback = null;
 
 
     constructor(two, relationSize, x, y, width, height, preferredFrameSize, minimumFrameSize) {
@@ -46,8 +49,8 @@ class Relation {
             }
             var vals = this.generateRandomValues(howManyValues);
             
-            // Crea il frame
-            var newFrame = new Frame(framePositionX, framePositionY, this.frameSize, this.frameSize, this.frameColor, MAX_ELEMENTS_PER_FRAME, two);
+            // Crea il frame        constructor(x, y, size, color, max_elements, two)
+            var newFrame = new Frame(framePositionX, framePositionY, this.frameSize, this.frameColor, MAX_ELEMENTS_PER_FRAME, two);
             newFrame.fill(vals);    // Scrivi i valori nel frame
             //newFrame.setView(0);    // Fai in modo che i valori non si vedono
 
@@ -71,7 +74,7 @@ class Relation {
 
 
         // Poni il nodo attuale uguale a tutta la relazione
-        this.setCurrentGroup(this.relation);
+        this.currentGroup = this.relation;
     }
 
 
@@ -118,9 +121,24 @@ class Relation {
         return this.currentGroup;
     }
 
+    // Trova l'indice di currentGroup tra i suoi sibling. Se c'e' un altro sibling dopo lui lo restituisce, se no ritorna null
+    getNextSibling() {
+        if (this.currentGroup.parent == null) return null;
+
+        var siblings = this.currentGroup.parent.children;
+
+        for (var i = 0; i < siblings.length; i++) {
+            // se trovi currentGroup e non e' l'ultimo sibling
+            if (siblings[i] == this.currentGroup && i < siblings.length - 1) {
+                return siblings[i+1];
+            }
+        }
+        return null;
+    }
+
 
     // Disegna rettangoli intorno ai frame (CONSECUTIVI!) contenuti nel campo values del nodo "groupNode". Salva i rettangoli dentro "highlighters"
-    highlightGroup(groupNode) {
+    highlightGroup(groupNode, callback=null) {
         // elimina gli highlighter gia' esistenti
         for (var i = this.highlighters.length - 1; i >= 0; i--) {
             this.highlighters[i].remove();
@@ -151,6 +169,10 @@ class Relation {
             // metti questo come last frame of row       
             lastFrameOfRow = currentFrame;
         } 
+
+
+        // Se c'e' una callback eseguila
+        if (callback != null) callback();
     }
 
     makeRectangleAroundFrames(firstFrame, lastFrame) {
@@ -186,16 +208,25 @@ class Relation {
 
 
     // Dividi il gruppo attuale in n sotto-nodi
-    splitGroup(number) {
+    splitGroup(number, callback=null) {
+
+        //console.log("Splitting current group");
+        //console.log(this.currentGroup);
 
         // Se stai dividendo in un unico gruppo non ha senso
-        if (number <= 1) return;
+        if (number <= 1) {
+            console.log("Trying to split in 1 single group");
+            return;
+        }
 
         // Prendi i frame da dividere nei sotto gruppi
         var frames = this.currentGroup.value;
 
         // Se ci sono <= number frame fermati perche' non ha senso dividerli ulteriormente
-        if (frames.length <= number) return;
+        if (frames.length <= number) {
+            console.log("Trying to split a group that fits in the buffer");
+            return;
+        }
 
         // Capisci quanti frame mettere nei sotto nodi
         var framesPerGroup = Math.floor(frames.length / number);       // per esempio, Math.floor(8/3) = 2
@@ -217,7 +248,8 @@ class Relation {
             this.currentGroup.children.push(node);
         }
 
-        //console.log(groups);
+        console.log("Splitting done. Groups:");
+        console.log(this.currentGroup);
 
         // Cambia il colore a tutti i gruppi tranne l'ultimo
         var color = this.randomColor();
@@ -236,7 +268,11 @@ class Relation {
         this.currentGroup.value = [];
 
         // Imposta il primo gruppo come nodo attuale
-        this.setCurrentGroup(this.currentGroup.children[1]);
+        this.setCurrentGroup(this.currentGroup.children[0]);
+
+
+        // Se c'e' una callback eseguila
+        if (callback != null) callback();
     }
 
 
@@ -381,7 +417,15 @@ class Relation {
         
         for (let i = 0; i < this.currentGroup.value.length; i++) {
             // copia il frame dentro framesToReturn
-            framesToReturn.push({...this.currentGroup.value[i]});      // DEEP COPY: "{...oggetto}" copia veramente l'oggetto invece di copiare il riferimento
+            //framesToReturn.push({...this.currentGroup.value[i]});
+            var elems = this.currentGroup.value[i].getValues();
+            framesToReturn.push( {
+                x: this.currentGroup.value[i].x,
+                y: this.currentGroup.value[i].y,
+                size: this.currentGroup.value[i].size,
+                color: this.currentGroup.value[i].color,
+                elements: elems
+            });
             // svuota il frame
             this.currentGroup.value[i].resetFrame();
             // metti il frame vuoto dentro availableFrames cosi' sai che puoi scriverci dentro
@@ -437,6 +481,33 @@ class Relation {
         return res;
     }
 
+    writeWithAnimation(frame, callback=null) {
+        var res = false;
+        for (let i = 0; i < this.availableFrames.length; i++) {
+            if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
+
+                // ANIMAZIONE
+                var end_x = this.availableFrames[i].x;
+                var end_y = this.availableFrames[i].y;
+                var end_size = this.availableFrames[i].size;
+                var animationLength = 1000;
+                animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, frame.color, animationLength, () => {
+                    // scrivi gli elementi
+                    this.availableFrames[i].fill(frame.elements);
+                    // cambia il colore
+                    this.availableFrames[i].setColor(frame.color);
+
+                    if (callback != null) callback();
+                });
+
+                res = true;
+                break;
+            }
+        }
+        return res;
+    }
+
+    /*
     writeWithAnimation(frame) {
         var res = false;
         for (let i = 0; i < this.availableFrames.length; i++) {
@@ -463,7 +534,7 @@ class Relation {
                     });
         
                 tween.start();
-                requestAnimationFrame(this.animate.bind(this));
+                //requestAnimationFrame(this.animate.bind(this));
 
                 res = true;
                 break;
@@ -471,12 +542,7 @@ class Relation {
         }
         return res;
     }
-
-    animate() {
-        TWEEN.update();
-        requestAnimationFrame(this.animate.bind(this));
-    }
-
+    */
 
 
     // TEMPORANEO, per testare lo scorrimento dei frame

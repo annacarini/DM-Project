@@ -1,10 +1,9 @@
 class Frame {
-    constructor(x, y, width, height, color, max_elements, two) {
+    constructor(x, y, size, color, max_elements, two) {
         this.linewidth = THICK_LINE;
 
         this.x = x;
         this.y = y;
-        this.size = width;
 
         this.two = two;
 
@@ -12,22 +11,21 @@ class Frame {
 
         this.elements = [];
         this.max_elements = max_elements
-        this.width = width
-        this.height = height
-        this.color = color
+        this.size = size;
+        this.color = color;
 
-        this.sorted = false
+        this.sorted = false;
         this.view = 1 // 0 relation, 1 buffer
 
-        this.rect = two.makeRectangle(0, 0, this.width, this.height);
+        this.rect = two.makeRectangle(0, 0, this.size, this.size);
         this.rect.opacity = 0.75;
         this.rect.linewidth = this.linewidth
 
-        this.rect_content = two.makeRectangle(0, -(height - this.linewidth)/2, width - this.linewidth, 0);
+        this.rect_content = two.makeRectangle(0, -(size - this.linewidth)/2, size - this.linewidth, 0);
         this.rect_content.fill = this.color
         this.rect_content.noStroke()
 
-        this.rect_search = two.makeRectangle(0, -(height - this.linewidth)/2 + ((this.height - 5) / this.max_elements)/2, width - this.linewidth, (this.height - 5) / this.max_elements)
+        this.rect_search = two.makeRectangle(0, -(size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2, size - this.linewidth, (this.size - 5) / this.max_elements)
         this.rect_search.fill = "rgba(0, 0, 0, 0.5)"
         this.rect_search.noStroke()
         this.rect_search.visible = false
@@ -50,10 +48,19 @@ class Frame {
 
 
     getValue(indx) {
-        return this.elements[indx][0]
+        return this.elements[indx][0];
     }
 
+
+    getValues() {
+        var ret = [];
+        for (var i = 0; i < this.elements.length; i++) {
+            ret.push(this.elements[i][0]);
+        }
+        return ret;
+    }
     
+
     setPosition(x, y) {
         this.x = x;
         this.y = y;
@@ -62,16 +69,16 @@ class Frame {
 
 
     setView(value) {
-        this.view = value
+        this.view = value;
         for (var i = 0; i < this.elements.length; i++) {
-            var text = this.elements[i][1]
-            text.visible = this.view
+            var text = this.elements[i][1];
+            text.visible = this.view;
         }
     }
 
 
     setSorted(value) {
-        this.sorted = value
+        this.sorted = value;
         if (this.sorted == true) {
             //aggiungere la texture
         }
@@ -84,13 +91,20 @@ class Frame {
     setColor(color) {
         //cambiare colore
         this.rect_content.fill = color;     // DA CONTROLLARE
+        this.rect_content.opacity = 1;
         this.color = color;                 // serve per far funzionare la funzione "mergeSiblings" di relation
     }
 
 
+    copy(frame) {
+        this.fill(frame.elements);
+        this.setColor(frame.color);
+    }
+
+
     _resetRectSearch() {
-        this.rect_search.position.y = -(this.height - this.linewidth)/2 + ((this.height - 5) / this.max_elements)/2
-        this.rect_search.visible = false
+        this.rect_search.position.y = -(this.size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2;
+        this.rect_search.visible = false;
     }
 
 
@@ -103,14 +117,14 @@ class Frame {
         this.elements = [];
         
         //cambiare colore
-        //this.rect_content.opacity = 0;  // TEMPORANEO
+        this.rect_content.opacity = 0;  // TEMPORANEO
 
         return ret
     }
 
 
     fill(new_elements) {
-        var offset = (this.height) / this.max_elements
+        var offset = (this.size) / this.max_elements
         this.rect_content.height = (offset * new_elements.length) - this.linewidth
         this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2
 
@@ -124,7 +138,7 @@ class Frame {
 
 
     addElement(indx, element) {
-        var offset = (this.height - this.linewidth) / this.max_elements
+        var offset = (this.size - this.linewidth) / this.max_elements
         this.rect_content.height += offset
         this.rect_content.position.y +=  offset / 2
 
@@ -160,7 +174,7 @@ class Frame {
         var value = element[0][0]
         var text = element[0][1]
 
-        var height_removed = (this.height - this.linewidth) / this.max_elements
+        var height_removed = (this.size - this.linewidth) / this.max_elements
         this.rect_content.height -= height_removed
         this.rect_content.position.y -=  height_removed / 2
 
