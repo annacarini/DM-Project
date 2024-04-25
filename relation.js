@@ -437,8 +437,45 @@ class Relation {
         return res;
     }
 
+    writeWithAnimation(frame) {
+        var res = false;
+        for (let i = 0; i < this.availableFrames.length; i++) {
+            if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
 
+                // ANIMAZIONE
+                var square = this.two.makeRectangle(frame.x, frame.y, frame.size, frame.size);
+                square.fill = frame.color;
+                //const tween = new TWEEN.Tween(this.rect_search, group).to({opacity: 0}, 2)
+                
+                var pos = { x: frame.x, y: frame.y };
+                const tween = new TWEEN.Tween(pos)
+                    .to({ x: this.availableFrames[i].x, y: this.availableFrames[i].y }, 5000)
+                    .onUpdate(function() { // Called after tween.js updates 'coords'
+                        square.translation.set(pos.x, pos.y);
+                    })
+                    .onComplete(() => {
+                        // elimina il quadrato
+                        square.remove();
+                        // scrivi gli elementi
+                        this.availableFrames[i].fill(frame.elements);
+                        // cambia il colore
+                        this.availableFrames[i].setColor(frame.color);
+                    });
+        
+                tween.start();
+                requestAnimationFrame(this.animate.bind(this));
 
+                res = true;
+                break;
+            }
+        }
+        return res;
+    }
+
+    animate() {
+        TWEEN.update();
+        requestAnimationFrame(this.animate.bind(this));
+    }
 
 
 
