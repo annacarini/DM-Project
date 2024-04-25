@@ -240,6 +240,7 @@ function play() {
             var currentGroup = relation.getCurrentGroup();
             // Se il gruppo non entra nel buffer, splittalo e rimani in questo stato
             if (currentGroup.value.length > bufferSize - 1) {
+                console.log("current group doesn't fit buffer, splitting it");
                 relation.splitGroup(bufferSize - 1, () => {
                     callback();
                 });
@@ -288,36 +289,69 @@ function play() {
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
             // Copia l'output frame nella relazione
-            relation.writeWithAnimation(frame, () => {
+            relation.writeWithAnimation(frame, false, () => {
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
+                    console.log("buffer still contains something");
                     applicationState = States.GroupInBuffer;
                 }
                 else {
+                    console.log("buffer is empty");
                     applicationState = States.GroupSorted;
                 }
                 callback();
             });
+            break;
 
+        
         case States.GroupSorted:
             // Controlla se questo gruppo e' la radice (significa che hai finito tutto)
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
                 applicationState = States.Finish;
+                callback();
             }
             // Altrimenti vedi se ha un fratello
             else {
                 var next_sibling = relation.getNextSibling();
                 // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
                 if (next_sibling == null) {
+                    console.log("current group has no siblings left");
                     relation.setCurrentGroup(currentGroup.parent);
                     applicationState = States.GroupToMerge;
                 }
                 else {
+                    console.log("current group has a sibling");
                     relation.setCurrentGroup(next_sibling);
                     applicationState = States.GroupToSort;
                 }
+                callback();
             }
+            break;
+        
+        case States.GroupToMerge:
+            var currentGroup = relation.getCurrentGroup();
+            // Se non ha figli vai a finish?
+            if (currentGroup.children == null) {
+                applicationState = States.Finish;
+                callback();
+            }
+
+            else {
+                // Prendi tutti i siblings
+                var siblings = currentGroup.parent.children;
+        
+                var framesToWrite = [];
+
+                // Carica una pagina di ogni child dentro framesToWrite
+                for (let i = 0; i < siblings.length; i++) {
+                    framesToWrite.push(relation.readOnePageOfChild(i));
+
+                }
+            }
+
+            break;
+
 
         default:
             break;
@@ -326,12 +360,17 @@ function play() {
     console.log("I'm in state: " + applicationState);
 }
 
-function callback() {
-    // attiva pulsante play
-    playButton.disabled = false; 
+var automaticPlay = true;
 
-    //await new Promise(r => setTimeout(r, 500));
-    //play();
+async function callback() {
+    if (! automaticPlay) {
+        // attiva pulsante play
+        playButton.disabled = false; 
+    }
+    else {
+        await new Promise(r => setTimeout(r, 500));
+        play();
+    }
 }
 
 

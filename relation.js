@@ -412,14 +412,14 @@ class Relation {
     readCurrentGroup() {
         var framesToReturn = [];
 
-        // svuota availableFrames (serve farlo?)
+        // svuota availableFrames
         this.availableFrames = [];
         
         for (let i = 0; i < this.currentGroup.value.length; i++) {
             // copia il frame dentro framesToReturn
             //framesToReturn.push({...this.currentGroup.value[i]});
             var elems = this.currentGroup.value[i].getValues();
-            framesToReturn.push( {
+            framesToReturn.push({
                 x: this.currentGroup.value[i].x,
                 y: this.currentGroup.value[i].y,
                 size: this.currentGroup.value[i].size,
@@ -449,7 +449,13 @@ class Relation {
             if (!this.availableFrames.includes(sib.value[i])) {
 
                 // copia il frame
-                frameToReturn = {...sib.value[i]}
+                frameToReturn = {
+                    x: sib.value[i].x,
+                    y: sib.value[i].y,
+                    size: sib.value[i].size,
+                    color: sib.value[i].color,
+                    elements: sib.value[i].getValues()
+                };
 
                 // svuota il frame
                 sib.value[i].resetFrame();
@@ -466,6 +472,44 @@ class Relation {
         return frameToReturn;
     }
 
+    // restituisce (e svuota) la prima pagina non gia' caricata dentro availableFrames del figlio di indice index
+    readOnePageOfChild(index) {
+        if (index >= this.currentGroup.children.length) return null;
+
+        var child = this.currentGroup.children[index];
+
+        var frameToReturn = null;   // se hai gia' letto tutto il child, restituisce null
+
+        for (let i = 0; i < child.value.length; i++) {
+
+            // se trovi un frame di questo sibling che non e' dentro availableFrames
+            if (!this.availableFrames.includes(child.value[i])) {
+
+                // copia il frame
+                frameToReturn = {
+                    x: child.value[i].x,
+                    y: child.value[i].y,
+                    size: child.value[i].size,
+                    color: child.value[i].color,
+                    elements: child.value[i].getValues()
+                };
+
+                // svuota il frame
+                child.value[i].resetFrame();
+
+                // metti il frame vuoto dentro availableFrames cosi' sai che puoi scriverci dentro
+                this.availableFrames.push(child.value[i]);
+
+                // shifta tutto
+                this.shiftFramesByOne(child.value[i]);
+
+                break;
+            }
+        }
+        return frameToReturn;
+    }
+
+
     write(frame) {
         var res = false;
         for (let i = 0; i < this.availableFrames.length; i++) {
@@ -481,10 +525,15 @@ class Relation {
         return res;
     }
 
-    writeWithAnimation(frame, callback=null) {
+    writeWithAnimation(frame, changeColor, callback=null) {
         var res = false;
         for (let i = 0; i < this.availableFrames.length; i++) {
             if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
+
+                var final_color = this.availableFrames[i].color;
+                if (changeColor) {
+                    final_color = frame.color;
+                }
 
                 // ANIMAZIONE
                 var end_x = this.availableFrames[i].x;
@@ -494,8 +543,8 @@ class Relation {
                 animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, frame.color, animationLength, () => {
                     // scrivi gli elementi
                     this.availableFrames[i].fill(frame.elements);
-                    // cambia il colore
-                    this.availableFrames[i].setColor(frame.color);
+                    // cambia il colore (serve farlo a prescindere per reimpostare l'opacita' ad 1)
+                    this.availableFrames[i].setColor(final_color);
 
                     if (callback != null) callback();
                 });
