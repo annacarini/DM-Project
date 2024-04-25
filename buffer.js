@@ -56,14 +56,16 @@ class Buffer {
         var min = Infinity
 
         for (var i = 0; i < this.frames.length; i++) {
-            var fMin, fIndx = this.frames[i].findMin()
+            var ret = this.frames[i].findMin()
+            var fMin = ret[0]
+            var fIndx = ret[1]
             if (fMin < min) {
                 min = fMin
                 indx = fIndx
                 frameIndx = i
             }
         }
-        return frameIndx, indx
+        return [frameIndx, indx]
     }
 
 
@@ -97,7 +99,29 @@ class Buffer {
     }
 
 
-    _checkVirtualEmptiness() {
+    checkEmptiness() {
+        for (var i = 0; i < this.frames.length; i++) {
+            if (this.frames[i].getValues().length)
+                return false
+        }
+        return true
+    }
+
+    checkToRefill() {
+        for (var i = 0; i < this.frames.length; i++) {
+            if (!this.frames[i].getValues().length && this.frameRefilled[i])
+                return i + 1
+        }
+        return false
+    }
+
+    checkFullOutput() {
+        if (this.outputFrame.getValues().length == MAX_ELEMENTS_PER_FRAME)
+            return true
+        return false
+    }
+
+    /*_checkVirtualEmptiness() {
         for (var i = 0; i < this._virtualFrames.length; i++) {
             if (this._virtualFrames[i].length)
                 return false
@@ -117,7 +141,7 @@ class Buffer {
         if (this._virtualOutputFrame.length == MAX_ELEMENTS_PER_FRAME)
             return true
         return false
-    }
+    }*/
 
 
     read(frames) {
@@ -134,13 +158,13 @@ class Buffer {
         var frame = this.frames[frameIndx]
         var value = frame.getValue(indx)
         frame.removeElement(indx)
-        this.outputFrame.addElement(this.outputFrame.elements.length, value)
+        this.outputFrame.addElement(value)
     }
 
 
     writeFromToAnimation(frameIndx, indx) {
         var frame = this.frames[frameIndx]
-        var value = this._virtualFrames[frameIndx][indx]
+        var value = this.frames[frameIndx].getValue(indx)
 
         const removeTweens = frame.removeElementAnimation(indx, 1000)
         const waitTweens = new TWEEN.Tween(null).to(null, 200)
@@ -166,7 +190,7 @@ class Buffer {
     }
 
 
-    sort() {
+    /*sort() {
         var tweens = []
         this.sortingStatus = this._checkVirtualEmptiness() + (this._checkVirtualToRefill() << 2) + (this._checkVirtualToEmpty() * 2)
         while (!this.sortingStatus) {
@@ -181,5 +205,73 @@ class Buffer {
             this.sortingStatus = this._checkVirtualEmptiness() + (this._checkVirtualToRefill() << 2) + (this._checkVirtualToEmpty() * 2)
         }
         return tweens
+    }*/
+
+
+    _findLastValues(n) {
+        var values = []
+        for (var i = 0; i < this.frames.length; i++) {
+            var newValues = this.frames[i].getValues()
+            for (var j = 0; j < newValues.length; j++) {
+                var newValue = newValues[j]
+                var m = 0
+                while (m < values.length && newValue >= values[m][0] && m < n)
+                    m++;
+                values.splice(m, 0, [newValue, j, i])
+            }
+        }
+
+        return values.slice(0, n)
+    }
+
+
+    sort() {
+        var lastValues = this._findLastValues(MAX_ELEMENTS_PER_FRAME - this.outputFrame.getValues().length)
+        var deleted = Array(this.length)
+        for (var i = 0; i < deleted.length; i++)
+            deleted[i] = Array(MAX_ELEMENTS_PER_FRAME).fill(0)
+        for (var i = 0; i < lastValues.length; i++) {
+            var frameIndx = lastValues[i][2]
+            var indx = lastValues[i][1]
+            this.writeFromTo(frameIndx, indx - deleted[frameIndx][indx])
+            for (var j = indx + 1; j < deleted[frameIndx].length; j++)
+                deleted[frameIndx][j] += 1
+        }
+    }
+
+
+    sortStepAnimation(callback = () => {}) {
+        this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2)
+        if (this.sortingStatus == 0) {
+            var ret = this._findMin()
+            var frameIndx = ret[0]
+            var indx = ret[1]
+
+            var tweens = this.writeFromToAnimation(frameIndx, indx)
+            var onComplete = tweens[1]._onCompleteCallback
+            tweens[1].onComplete(() => {onComplete(); callback})
+            tweens[0].start()
+        }
+        else
+            callback()
+    }
+
+    sortAnimation(callback = () => {}) {
+        /*var lastValues = this._findLastValues(MAX_ELEMENTS_PER_FRAME - this.outputFrame.getValues().length)
+        console.log(lastValues)
+        for (var i = 0; i < lastValues.length; i++) {
+            var tweens = this.writeFromToAnimation(lastValues[i][2], lastValues[i][1])
+            if (i == lastValues[i].length - 1) {
+                var onComplete = tweens[1]._onCompleteCallback
+                tweens[1].onComplete(() => {onComplete(); callback})
+            }
+            tweens[0].start()
+        }*/
+        this.sort()
+        var tween = new TWEEN.Tween(null).to(null, 1000).onComplete( () => {
+                this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
+                callback();}
+        )
+        tween.start()
     }
 }

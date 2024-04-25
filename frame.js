@@ -249,12 +249,12 @@ class Frame {
         var min = Infinity
         var indx = -1
         for (var i = 0; i < this.elements.length; i++) {
-            if (this.elements[i] < min) {
-                min = this.elements[i]
+            if (this.elements[i][0] < min) {
+                min = this.elements[i][0]
                 indx = i
             }
         }
-        return min, indx
+        return [min, indx]
     }
 }
   
