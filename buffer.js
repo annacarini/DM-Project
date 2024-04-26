@@ -3,34 +3,35 @@ class Buffer {
 
         this.group = new Two.Group();
 
-        this.two = two
+        this.two = two;
 
-        this.x = x
-        this.y = y
-        this.frame_size = frameSize
-        this.length = length
+        this.x = x;
+        this.y = y;
+        this.frame_size = frameSize;
+        this.length = length;
         this.spaceBetween = SPACE_BETWEEN_FRAMES;
-        this.frames = []
+        this.frames = [];
 
-        this.linewidth = THICK_LINE
+        this.linewidth = THICK_LINE;
 
-        this.sortingStatus = 0
-        this._virtualFrames = Array(length, [])
-        this._virtualOutputFrame = []
-        this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false)
+        this.sortingStatus = 0;
+        this._virtualFrames = Array(length, []);
+        this._virtualOutputFrame = [];
+        this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false);
 
-        var spaceOutputFrame = 10
+        var spaceOutputFrame = 10;
         var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
         var framePosition = x - totalWidth/2 + frameSize/2;
-        for (var i = 0; i < length; i++) {
-            var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two)
-            newFrame.setView(1)
-            this.frames.push(newFrame)
-            this.group.add(newFrame.group)
+        for (var i = 0; i < length-1; i++) {
+            //constructor(x, y, width, height, color, max_elements, two)
+            var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
+            newFrame.setView(1);
+            this.frames.push(newFrame);
+            this.group.add(newFrame.group);
             framePosition += frameSize + this.spaceBetween;
         }
 
-        framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES
+        framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
         this.outputFrame = new Frame(framePosition, y, frameSize, "rgb(255, 0, 0)", MAX_ELEMENTS_PER_FRAME, two)
         var txt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, fontSizeSmall);
         this.group.add(this.outputFrame.group)
@@ -144,13 +145,18 @@ class Buffer {
     }*/
 
 
-    read(frames) {
+    read(frames, callback=null) {
+        console.log(frames);
         for (var i = 0; i < frames.length; i++) {
-            var frame = frames[i]
-            this.frames[i].copy(frame)
-            this._virtualFrames[i] = frame.getValues()
-            this.frameRefilled[i] = true
+            var frame = frames[i];
+            console.log(frame);
+            this.frames[i].copy(frame);
+            this._virtualFrames[i] = frame.elements;
+            this.frameRefilled[i] = true;
         }
+
+        // Se c'e' una callback chiamala
+        if (callback != null) callback();
     }
 
 
@@ -273,5 +279,85 @@ class Buffer {
                 callback();}
         )
         tween.start()
+    }
+
+
+    getPositionOfFrame(index) {
+        if (index >= this.length) return null;
+        return [this.frames[index].x, this.frames[index].y];
+    }
+
+    /*
+    readWithAnimation(frames, callback=null) {
+        console.log(frames);
+        
+        // Per chiamare la callback dobbiamo assicurarci che tutte le animazioni (sono frames.length) sono
+        // terminate. Quindi in questa funzione teniamo traccia di quante animazioni terminano
+        var callbacksReceived = 0;
+        var callbacksCounter = () => {
+            callbacksReceived++;
+            if (callbacksReceived >= frames.length) {
+                if (callback != null) callback();
+            }
+        }
+
+        for (var i = 0; i < frames.length; i++) {
+            var frame = frames[i];
+            // Crea animazione
+            var animationLength = 2;
+            animateOneSquare(frame.x, frame.y, this.frames[i].x, this.frames[i].y, frame.size, frame.color, animationLength, () => {
+                // Quando l'animazione e' completa esegui questo:
+                this.frames[i].copy(frame);
+                this._virtualFrames[i] = frame.elements;
+                this.frameRefilled[i] = true;
+                callbacksCounter();
+            }).bind(this);
+        }
+    }
+    */
+
+
+
+    // TEMPORANEA per testare se la scrittura dal buffer alla relazione funziona.
+    // semplicemente ogni volta che la chiami copia il contenuto del primo frame pieno
+    // che trova dentro l'output frame
+    fakeSort(callback=null) {
+
+        // Prendi la prima pagina vuota che trovi e copiala nell'output frame
+        for (var i = 0; i < this.frames.length; i++) {
+            if (this.frames[i].elements.length > 0) {
+                this.outputFrame.fill(this.frames[i].getValues());
+                this.frames[i].resetFrame();
+                break;
+            }
+        }
+
+        if (callback != null) callback();
+    }
+
+
+    // TEMPORANEA: restituisce il contenuto dell'output frame e lo svuota
+    flushOutputFrame() {
+        var res = {
+            x: this.outputFrame.x,
+            y: this.outputFrame.y,
+            size: this.outputFrame.size,
+            color: this.outputFrame.color,
+            elements: this.outputFrame.getValues()
+        }
+        this.outputFrame.resetFrame();
+        return res;
+    }
+
+    // TEMPORANEA: ti restituisce true se c'e' qualcosa dentro il buffer (escluso output frame), false se e' tutto vuoto
+    bufferContainsSomething() {
+        var res = false;
+        for (var i = 0; i < this.frames.length; i++) {
+            if (this.frames[i].elements.length > 0) {
+                res = true;
+                break;
+            }
+        }
+        return res;
     }
 }

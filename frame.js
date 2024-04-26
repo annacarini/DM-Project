@@ -5,7 +5,6 @@ class Frame {
 
         this.x = x;
         this.y = y;
-        this.size = size;
 
         this.two = two;
 
@@ -13,16 +12,17 @@ class Frame {
 
         this.elements = [];
         this.max_elements = max_elements
-        this.color = color
+        this.size = size;
+        this.color = color;
 
-        this.sorted = false
+        this.sorted = false;
         this.view = 1 // 0 relation, 1 buffer
 
         this.rect = two.makeRectangle(0, 0, this.size, this.size);
         this.rect.opacity = 0.75;
         this.rect.linewidth = this.linewidth
 
-        this.rect_content = two.makeRectangle(0, -(size - this.linewidth)/2, size- this.linewidth, 0);
+        this.rect_content = two.makeRectangle(0, -(size - this.linewidth)/2, size - this.linewidth, 0);
         this.rect_content.fill = this.color
         this.rect_content.noStroke()
 
@@ -55,37 +55,37 @@ class Frame {
 
 
     getValue(indx) {
-        return this.elements[indx][0]
+        return this.elements[indx][0];
     }
 
 
     getValues() {
-        var ret = []
+        var ret = [];
         for (var i = 0; i < this.elements.length; i++) {
-            ret.push(this.elements[i][0])
+            ret.push(this.elements[i][0]);
         }
-        return ret
+        return ret;
     }
-
     
+
     setPosition(x, y) {
-        this.x = x
-        this.y = y
-        this.group.translation.set(x, y)
+        this.x = x;
+        this.y = y;
+        this.group.translation.set(x, y);
     }
 
 
     setView(value) {
-        this.view = value
+        this.view = value;
         for (var i = 0; i < this.elements.length; i++) {
-            var text = this.elements[i][1]
-            text.visible = this.view
+            var text = this.elements[i][1];
+            text.visible = this.view;
         }
     }
 
 
     setSorted(value) {
-        this.sorted = value
+        this.sorted = value;
         if (this.sorted == true) {
             //aggiungere la texture
         }
@@ -98,19 +98,20 @@ class Frame {
     setColor(color) {
         //cambiare colore
         this.rect_content.fill = color;     // DA CONTROLLARE
+        this.rect_content.opacity = 1;
         this.color = color;                 // serve per far funzionare la funzione "mergeSiblings" di relation
     }
 
 
     copy(frame) {
-        this.fill(frame.getValues())
-        this.setColor(frame.color)
+        this.fill(frame.elements);
+        this.setColor(frame.color);
     }
 
 
     _resetRectSearch() {
-        this.rect_search.position.y = -(this.size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2
-        this.rect_search.visible = false
+        this.rect_search.position.y = -(this.size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2;
+        this.rect_search.visible = false;
     }
 
 
@@ -130,6 +131,7 @@ class Frame {
 
     fill(new_elements) {
         this.elements = []
+
         var offset = (this.size) / this.max_elements
         this.rect_content.height = (offset * new_elements.length) - this.linewidth
         this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2
