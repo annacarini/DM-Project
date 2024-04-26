@@ -347,6 +347,7 @@ function play() {
                 for (let i = 0; i < siblings.length; i++) {
                     framesToWrite.push(relation.readOnePageOfChild(i));
                 }
+                console.log("I frame letti: ", framesToWrite)
                 // Carica nel buffer le pagine da leggere
                 buffer.read(framesToWrite)
             }
