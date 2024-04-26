@@ -68,7 +68,10 @@ var frame3 = new Frame(100, 100, 100, 'rgb(0, 200, 255)', 5, two)
 frame3.fill([12, 21, 2, 8])
 
 
-buffer.read([frame, frame2, frame3])
+buffer.read([
+  {elements: frame.getValues(), color: frame.color},
+  {elements: frame2.getValues(), color: frame2.color},
+  {elements: frame3.getValues(), color: frame3.color}])
 
 two.update();
 //sort()
