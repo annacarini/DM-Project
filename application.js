@@ -374,7 +374,7 @@ function play() {
                         relation.shiftFramesByOne(framesToWrite[i]);
                     }
                     // Scrivi i dati nel buffer
-                    buffer.read(framesToWrite, () => {
+                    buffer.writeOnBuffer(framesToWrite, () => {
                         applicationState = States.ChildrenInBuffer;
                         callback();
                     });
@@ -383,21 +383,10 @@ function play() {
 
             break;
 
-        case States.ChildrenInBuffer:
-            // di' al buffer di fare il sort. passagli due callback: una da chiamare quando
-            // uno dei frame del buffer si svuota, e ti fa andare allo stato OneEmptyFrameInBuffer,
-            // una da chiamare quando l'output frame e' pieno e ti fa andare allo stato
-            // OutputFrameFullMerging
-
-            break;
-
-        case States.OneEmptyFrameInBuffer:
-
-            break;
-
-
 
         case States.ChildrenInBuffer:
+            // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
+            // se invece c'è un frame che è stato svuotato allora va riempito (caso 2)
             buffer.sortAnimation(
                 () => {
                     applicationState = States.OutputFrameFullMerging;
@@ -412,6 +401,34 @@ function play() {
         
         case States.OneEmptyFrameInBuffer:
             var frameEmptyIndx = buffer.frameToRefill
+
+            console.log("Stiamo dentor EMptyFrame In buffer", frameEmptyIndx)
+
+            var fr = relation.readOnePageOfChild(frameEmptyIndx);
+            console.log("Il frame letto e': ", fr)
+            if (fr) {
+                // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
+                let endPos = buffer.getPositionOfFrame(frameEmptyIndx);
+                end_x = endPos[0];
+                end_y = endPos[1];
+
+                animateOneSquare(fr.x, fr.y, end_x, end_y, fr.size, frameSize, fr.color, 1000, () => {
+                    // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
+                    relation.shiftFramesByOne(fr);
+                    // Scrivi i dati nel buffer
+                    buffer.writeOnBufferFrame(fr, frameEmptyIndx, () => {
+                        applicationState = States.ChildrenInBuffer;
+                        callback();
+                    });
+                });
+            }
+            else {
+                if (buffer.checkFullOutput()) // L'output è pieno
+                    applicationState = States.OutputFrameFullMerging;
+                else if (buffer.bufferContainsSomething()) // Il buffer non è vuoto
+                    applicationState = States.ChildrenInBuffer;
+                callback();
+            }
             break;
 
         
@@ -425,12 +442,9 @@ function play() {
                     console.log("buffer still contains something");
                     applicationState = States.ChildrenInBuffer;
                 }
-                else if (buffer.frameToRefill != -1) {
-                    applicationState = States.OneEmptyFrameInBuffer
-                }
                 else {
-
-                    //applicationState = States.GroupSorted;
+                    relation.mergeChildren();
+                    applicationState = States.GroupSorted;
                 }
                 callback();
             });

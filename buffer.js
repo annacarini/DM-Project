@@ -113,7 +113,7 @@ class Buffer {
     checkToRefill() {
         for (var i = 0; i < this.frames.length; i++) {
             if (!this.frames[i].getValues().length && this.frameRefilled[i])
-                return i + 1
+                return i
         }
         return -1
     }
@@ -293,7 +293,6 @@ class Buffer {
         var tween = new TWEEN.Tween(null).to(null, 1000).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
                 this.frameToRefill = this.checkToRefill();
-                console.log("Frame da refillare", this.frameToRefill, "merge", merge)
                 if (merge && this.frameToRefill != -1) {
                     this.frameRefilled[this.frameToRefill] = false;
                     mergeCallback();}
