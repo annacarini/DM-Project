@@ -51,6 +51,8 @@ class Buffer {
     }
 
 
+    // Ritorna l'indice del frame dove è contenuto il valore più basso in tutto il buffer(output escluso)
+    // Ritorna anche l'indice del valore all'interno del frame
     _findMin() {
         var frameIndx = 0
         var indx = 0
@@ -89,17 +91,11 @@ class Buffer {
     }
 
 
-    _checkToRefill() {
-        for (var i = 0; i < this.frames.length; i++) {
-            if (this.frames[i].elements.length == 0) {
-                if (this.sortRefilled[i])
-                    return true
-            }
-        }
-        return false
-    }
+    /***************** OPERAZIONI DI CHECK ***************************/
 
-
+    // Controlla se non ci sono più elementi nel buffer (output escluso)
+    // True: il buffer non contiene più elementi
+    // False: il buffer contiene elementi
     checkEmptiness() {
         for (var i = 0; i < this.frames.length; i++) {
             if (this.frames[i].getValues().length)
@@ -108,6 +104,11 @@ class Buffer {
         return true
     }
 
+
+    // Controlla se c'è un frame senza valori. Ritorna true se le due condizioni sono vere:
+    // 1) Esiste un frame vuoto
+    // 2) Il frame non ha mai chiesto un refill -- oppure --
+    //      l'ultima volta che il frame ha chiesto il refill è stato ricaricato
     checkToRefill() {
         for (var i = 0; i < this.frames.length; i++) {
             if (!this.frames[i].getValues().length && this.frameRefilled[i])
@@ -116,11 +117,14 @@ class Buffer {
         return false
     }
 
+
+    // Ritorna true se l'output è pineo
     checkFullOutput() {
         if (this.outputFrame.getValues().length == MAX_ELEMENTS_PER_FRAME)
             return true
         return false
     }
+
 
     /*_checkVirtualEmptiness() {
         for (var i = 0; i < this._virtualFrames.length; i++) {
@@ -144,6 +148,8 @@ class Buffer {
         return false
     }*/
 
+    /***********************************************************/
+
 
     read(frames, callback=null) {
         console.log(frames);
@@ -160,6 +166,8 @@ class Buffer {
     }
 
 
+    // Rimuove un elemento all'indice indx dal frame con indice FrameIndx.
+    // Poi scrive tale elemento nell'output.
     writeFromTo(frameIndx, indx) {
         var frame = this.frames[frameIndx]
         var value = frame.getValue(indx)
@@ -168,6 +176,7 @@ class Buffer {
     }
 
 
+    //
     writeFromToAnimation(frameIndx, indx) {
         var frame = this.frames[frameIndx]
         var value = this.frames[frameIndx].getValue(indx)
