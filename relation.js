@@ -136,6 +136,10 @@ class Relation {
         return null;
     }
 
+    emptyAvailableFrames() {
+        this.availableFrames = [];
+    }
+
 
     // Disegna rettangoli intorno ai frame (CONSECUTIVI!) contenuti nel campo values del nodo "groupNode". Salva i rettangoli dentro "highlighters"
     highlightGroup(groupNode, callback=null) {
@@ -545,6 +549,11 @@ class Relation {
                     this.availableFrames[i].fill(frame.elements);
                     // cambia il colore (serve farlo a prescindere per reimpostare l'opacita' ad 1)
                     this.availableFrames[i].setColor(final_color);
+
+                    // se questo era l'ultimo availableFrame (ed ora e' stato riempito), svuota l'array
+                    if (i == this.availableFrames.length - 1) {
+                        this.emptyAvailableFrames();
+                    }
 
                     if (callback != null) callback();
                 });
