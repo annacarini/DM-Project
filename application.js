@@ -427,8 +427,10 @@ function play() {
         case States.OutputFrameFullMerging:
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
+            // Imposta il suo colore pari al colore dell'ultimo figlio
+            frame.color = relation.getColorOfLastChild();
             // Copia l'output frame nella relazione
-            relation.writeWithAnimation(frame, false, () => {
+            relation.writeWithAnimation(frame, true, () => {
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
                     console.log("buffer still contains something");

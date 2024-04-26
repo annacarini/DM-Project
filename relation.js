@@ -197,7 +197,7 @@ class Relation {
     // Per generare valori random per riempire la relazione
     generateRandomValues(quantity) {
         var vals = [];
-        const maxVal = 20;
+        const maxVal = 99;
         for (let i = 0; i < quantity; i++) {
             vals.push(Math.round(Math.random() * maxVal));
         }
@@ -393,6 +393,17 @@ class Relation {
         return "hsl(" + col[0] + ',' + col[1] + '%,' + col[2] + '%)';
     }
 
+    // serve durante la fase di scrittura del merge-sort
+    getColorOfLastChild() {
+        // Se il nodo corrente non ha figli, restituisci il colore di questo gruppo
+        if (this.currentGroup.children == []) {
+            return this.currentGroup.value[0].color;
+        }
+
+        // Restituisci il colore del primo frame dell'ultimo figlio
+        var children = this.currentGroup.children;
+        return children[children.length - 1].value[0].color;
+    }
 
 
 
