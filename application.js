@@ -364,9 +364,12 @@ function play() {
                 // Crea animazione
                 animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
                     // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
+                    
                     for (let i = 0; i < framesToWrite.length; i++) {
+                        console.log("sto shiftando");
                         relation.shiftFramesByOne(framesToWrite[i]);
                     }
+                    
                     // Scrivi i dati nel buffer
                     buffer.writeOnBuffer(framesToWrite, () => {
                         applicationState = States.ChildrenInBuffer;

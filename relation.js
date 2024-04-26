@@ -545,7 +545,7 @@ class Relation {
                 this.availableFrames.push(child.value[i]);
 
                 // shifta tutto
-                this.shiftFramesByOne(child.value[i]);
+                //this.shiftFramesByOne(child.value[i]);
 
                 break;
             }
@@ -669,7 +669,56 @@ class Relation {
 
     }
 
+    shiftFramesByOne(emptyFrame) {
 
+        // Shifta solo i sibling attuali, quindi parti dal primo frame del primo sibling
+        var startingFrame = this.currentGroup.children[0].value[0];
+
+        // Se emptyFrame e' proprio lo startingFrame, non fare nulla
+        if (emptyFrame.x == startingFrame.x && emptyFrame.y == startingFrame.y) {
+            return;
+        }
+
+        // Itera tutti i frame in ordine inverso. Quando incontri emptyFrame inizia a shiftare
+        // tutti di una posizione in avanti. Quando arrivi a startingFrame, shifta anche lui
+        // e poi fermati. Se prima di arrivare a startingFrame trovi un frame appartenente ad
+        // availableFrames, fermati e basta senza shiftarlo.
+
+        var shifting = false;
+        var currentFrame;
+        for (var i = this.relationArray.length-1; i > 0; i--) {
+
+            //console.log(i);
+            currentFrame = this.relationArray[i];
+
+            if (!shifting) {
+                if (currentFrame.x == emptyFrame.x && currentFrame.y == emptyFrame.y && currentFrame != startingFrame) {
+                    shifting = true;
+                }
+            }
+            if (shifting) {
+                // se il frame prima non e' vuoto e non e' in availableFrames, scambialo con l'empty frame
+                if (this.relationArray[i-1].elements.length > 0 && !this.availableFrames.includes(this.relationArray[i-1])) {
+                    this.swapFrames(i-1, i);
+                    //await new Promise(r => setTimeout(r, 200));
+
+                    // se il frame con cui hai scambiato era lo starting frame, fermati
+                    if (this.relationArray[i] == startingFrame) {
+                        console.log("trovato starting frame, posizione: " + i);
+                        break;
+                    }
+                }
+                else {
+                    break;
+                }
+
+
+            }
+
+        }
+    }
+
+    /*
     shiftFramesByOne(emptyFrame) {
 
         // Shifta solo i sibling attuali, quindi parti dal primo frame del primo sibling
@@ -718,6 +767,7 @@ class Relation {
 
         }
     }
+    */
 
     // Questa scambia due frame, sia cambiando il loro indice dentro relationArray, sia
     // scambiando le loro posizioni
