@@ -18,6 +18,7 @@ class Buffer {
         this._virtualFrames = Array(length, []);
         this._virtualOutputFrame = [];
         this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false);
+        this.frameToRefill = -1
 
         var spaceOutputFrame = 10;
         var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
@@ -105,7 +106,7 @@ class Buffer {
     }
 
 
-    // Controlla se c'è un frame senza valori. Ritorna true se le due condizioni sono vere:
+    // Controlla se c'è un frame senza valori. Ritorna un numero > 0 se le due condizioni sono vere:
     // 1) Esiste un frame vuoto
     // 2) Il frame non ha mai chiesto un refill -- oppure --
     //      l'ultima volta che il frame ha chiesto il refill è stato ricaricato
@@ -114,7 +115,7 @@ class Buffer {
             if (!this.frames[i].getValues().length && this.frameRefilled[i])
                 return i + 1
         }
-        return false
+        return -1
     }
 
 
@@ -151,17 +152,22 @@ class Buffer {
     /***********************************************************/
 
 
-    read(frames, callback=null) {
-        console.log(frames);
+    writeOnBuffer(frames, callback=null) {
         for (var i = 0; i < frames.length; i++) {
             var frame = frames[i];
-            console.log(frame);
             this.frames[i].copy(frame);
             this._virtualFrames[i] = frame.elements;
             this.frameRefilled[i] = true;
         }
 
         // Se c'e' una callback chiamala
+        if (callback != null) callback();
+    }
+
+
+    writeOnBufferFrame(frame, indx, callback = null) {
+        this.frames[indx].copy(frame)
+        this.frameRefilled[indx] = true;
         if (callback != null) callback();
     }
 
@@ -176,7 +182,7 @@ class Buffer {
     }
 
 
-    //
+    // Crea e ritorna una catena di animazioni che rimuove un elemento e poi lo scrive nel buffer
     writeFromToAnimation(frameIndx, indx) {
         var frame = this.frames[frameIndx]
         var value = this.frames[frameIndx].getValue(indx)
@@ -240,17 +246,27 @@ class Buffer {
     }
 
 
-    sort() {
+    sort(merge = false) {
+        // Ottengo un array contenente gli n valori più piccoli prensenti nel buffer, dove n sono gli elementi mancanti nell'output
         var lastValues = this._findLastValues(MAX_ELEMENTS_PER_FRAME - this.outputFrame.getValues().length)
-        var deleted = Array(this.length)
+        
+        // Creo un array di un numero di array pari ai frames. Setto tutto a zero
+        var deleted = Array(this.length - 1)
         for (var i = 0; i < deleted.length; i++)
-            deleted[i] = Array(MAX_ELEMENTS_PER_FRAME).fill(0)
+            deleted[i] = Array(this.frames[i].getValues().length).fill(0)
+
+        // Fino a che non scorro tutti i valori chiamo la writeFromTo sull'attuale valore.
+        // Se merge è true mi fermo prima, cioè quando un frame diventa vuoto.
         for (var i = 0; i < lastValues.length; i++) {
             var frameIndx = lastValues[i][2]
             var indx = lastValues[i][1]
-            this.writeFromTo(frameIndx, indx - deleted[frameIndx][indx])
-            for (var j = indx + 1; j < deleted[frameIndx].length; j++)
+            var toShift = indx ? deleted[frameIndx][indx - 1] : 0 // Shifto indx se alcuni numeri prima dell'indx sono stati eliminati
+            this.writeFromTo(frameIndx, indx - toShift)
+            for (var j = indx; j < deleted[frameIndx].length; j++)
                 deleted[frameIndx][j] += 1
+            // Se un frame è da refillare blocco
+            if (merge && deleted[frameIndx][deleted[frameIndx].length -1] == deleted[frameIndx].length && this.frameRefilled[frameIndx])
+                break
         }
     }
 
@@ -271,21 +287,18 @@ class Buffer {
             callback()
     }
 
-    sortAnimation(callback = () => {}) {
-        /*var lastValues = this._findLastValues(MAX_ELEMENTS_PER_FRAME - this.outputFrame.getValues().length)
-        console.log(lastValues)
-        for (var i = 0; i < lastValues.length; i++) {
-            var tweens = this.writeFromToAnimation(lastValues[i][2], lastValues[i][1])
-            if (i == lastValues[i].length - 1) {
-                var onComplete = tweens[1]._onCompleteCallback
-                tweens[1].onComplete(() => {onComplete(); callback})
-            }
-            tweens[0].start()
-        }*/
-        this.sort()
+    sortAnimation(sortCallback = () => {}, mergeCallback = () => {}, merge = false) {
+        this.sort(merge)
+        console.log("Prima del tween quando merge", merge)
         var tween = new TWEEN.Tween(null).to(null, 1000).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
-                callback();}
+                this.frameToRefill = this.checkToRefill();
+                console.log("Frame da refillare", this.frameToRefill, "merge", merge)
+                if (merge && this.frameToRefill != -1) {
+                    this.frameRefilled[this.frameToRefill] = false;
+                    mergeCallback();}
+                else
+                    sortCallback();}
         )
         tween.start()
     }

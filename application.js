@@ -269,7 +269,7 @@ function play() {
                 }
                 animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
                     // Quando terminano le animazioni, scrivi i dati nel buffer
-                    buffer.read(frames, () => {
+                    buffer.writeOnBuffer(frames, () => {
                         applicationState = States.GroupInBuffer;
                         callback();
                     });
@@ -349,9 +349,52 @@ function play() {
                 }
                 console.log("I frame letti: ", framesToWrite)
                 // Carica nel buffer le pagine da leggere
-                buffer.read(framesToWrite)
+                buffer.writeOnBuffer(framesToWrite, () => {
+                    applicationState = States.ChildrenInBuffer;
+                    callback();
+                })
             }
 
+            break;
+
+
+        case States.ChildrenInBuffer:
+            buffer.sortAnimation(
+                () => {
+                    applicationState = States.OutputFrameFullMerging;
+                    callback();},
+                () => {
+                    applicationState = States.OneEmptyFrameInBuffer;
+                    callback();},
+                merge = true
+            )
+            break;
+            
+        
+        case States.OneEmptyFrameInBuffer:
+            var frameEmptyIndx = buffer.frameToRefill
+            break;
+
+        
+        case States.OutputFrameFullMerging:
+            // Prendi l'output frame
+            var frame = buffer.flushOutputFrame();
+            // Copia l'output frame nella relazione
+            relation.writeWithAnimation(frame, false, () => {
+                // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
+                if (buffer.bufferContainsSomething()) {
+                    console.log("buffer still contains something");
+                    applicationState = States.ChildrenInBuffer;
+                }
+                else if (buffer.frameToRefill != -1) {
+                    applicationState = States.OneEmptyFrameInBuffer
+                }
+                else {
+
+                    //applicationState = States.GroupSorted;
+                }
+                callback();
+            });
             break;
 
 
@@ -362,7 +405,7 @@ function play() {
     console.log("I'm in state: " + applicationState);
 }
 
-var automaticPlay = true;
+var automaticPlay = false;
 
 async function callback() {
     if (! automaticPlay) {
