@@ -279,7 +279,7 @@ function play() {
 
         case States.GroupInBuffer:
             // Avvia il sort
-            buffer.fakeSort(() => {
+            buffer.sortAnimation(() => {
                 applicationState = States.OutputFrameFullSorting;
                 callback();
             });
@@ -346,8 +346,10 @@ function play() {
                 // Carica una pagina di ogni child dentro framesToWrite
                 for (let i = 0; i < siblings.length; i++) {
                     framesToWrite.push(relation.readOnePageOfChild(i));
-
                 }
+                console.log("I frame letti: ", framesToWrite)
+                // Carica nel buffer le pagine da leggere
+                buffer.read(framesToWrite)
             }
 
             break;
