@@ -331,15 +331,9 @@ function play() {
         
         case States.GroupToMerge:
             var currentGroup = relation.getCurrentGroup();
-            // Se non ha figli vai a finish?
-            if (currentGroup.children == null) {
-                applicationState = States.Finish;
-                callback();
-            }
-
-            else {
+            
                 // Prendi tutti i siblings
-                var siblings = currentGroup.parent.children;
+                var siblings = currentGroup.children;
         
                 var framesToWrite = [];
 
@@ -379,7 +373,6 @@ function play() {
                         callback();
                     });
                 });
-            }
 
             break;
 
@@ -402,10 +395,7 @@ function play() {
         case States.OneEmptyFrameInBuffer:
             var frameEmptyIndx = buffer.frameToRefill
 
-            console.log("Stiamo dentor EMptyFrame In buffer", frameEmptyIndx)
-
             var fr = relation.readOnePageOfChild(frameEmptyIndx);
-            console.log("Il frame letto e': ", fr)
             if (fr) {
                 // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
                 let endPos = buffer.getPositionOfFrame(frameEmptyIndx);
@@ -427,6 +417,8 @@ function play() {
                     applicationState = States.OutputFrameFullMerging;
                 else if (buffer.bufferContainsSomething()) // Il buffer non è vuoto
                     applicationState = States.ChildrenInBuffer;
+                else
+                    applicationState = States.OutputFrameFullMerging;
                 callback();
             }
             break;
@@ -458,7 +450,7 @@ function play() {
     console.log("I'm in state: " + applicationState);
 }
 
-var automaticPlay = false;
+var automaticPlay = true;
 
 async function callback() {
     if (! automaticPlay) {

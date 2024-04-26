@@ -197,7 +197,7 @@ class Relation {
     // Per generare valori random per riempire la relazione
     generateRandomValues(quantity) {
         var vals = [];
-        const maxVal = 999999;
+        const maxVal = 20;
         for (let i = 0; i < quantity; i++) {
             vals.push(Math.round(Math.random() * maxVal));
         }
@@ -660,10 +660,9 @@ class Relation {
 
 
     shiftFramesByOne(emptyFrame) {
-        if (this.currentGroup.parent == null) return;
 
         // Shifta solo i sibling attuali, quindi parti dal primo frame del primo sibling
-        var startingFrame = this.currentGroup.parent.children[0].value[0];
+        var startingFrame = this.currentGroup.children[0].value[0];
 
         // Se emptyFrame e' proprio lo startingFrame, non fare nulla
         if (emptyFrame == startingFrame) {

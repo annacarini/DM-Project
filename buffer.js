@@ -290,7 +290,7 @@ class Buffer {
     sortAnimation(sortCallback = () => {}, mergeCallback = () => {}, merge = false) {
         this.sort(merge)
         console.log("Prima del tween quando merge", merge)
-        var tween = new TWEEN.Tween(null).to(null, 1000).onComplete( () => {
+        var tween = new TWEEN.Tween(null).to(null, 200).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
                 this.frameToRefill = this.checkToRefill();
                 if (merge && this.frameToRefill != -1) {
