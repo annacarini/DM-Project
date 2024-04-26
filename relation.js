@@ -313,6 +313,35 @@ class Relation {
         this.changeGroupColor(this.currentGroup, color);
     }
 
+
+    // Unisce tutti i figli del gruppo attuale, mettendo i loro frame come "value" del gruppo attuale. Poi elimina i figli
+    mergeChildren() {
+        // Prendi tutti i figli
+        var children = this.currentGroup.children;
+
+        // Unisci tutti i frame di tutti i children
+        var frames = [];
+        for (let i = 0; i < children.length; i++) {
+            frames = frames.concat(children[i].value);
+        }
+
+        // Ri-ordina i frame rispetto alla y e rispetto alla x, in modo da averli nello stesso
+        // ordine in cui appaiono graficamente (perche' la funzione shiftFramesByOne incasina
+        // tutto, ma servono ordinati per disegnare l'highlighter bene)
+        frames.sort( this.compareFramesByPosition );
+
+        // Metti questi frame come "value" del nodo attuale
+        this.currentGroup.value = frames;
+
+        // Elimina i figli
+        this.currentGroup.children = [];
+
+        // Assegna il colore dell'ultimo frame a tutti i frame della lista (l'ultimo perche' cosi' e' sicuramente diverso da quello del gruppo dopo)
+        var color = frames[frames.length - 1].color;
+        this.changeGroupColor(this.currentGroup, color);
+    }
+
+
     // Serve per ordinare i frame in base alla loro posizione
     compareFramesByPosition( frame1, frame2 ) {
         if (frame1.y < frame2.y) {  // frame 1 e' su una riga sopra, quindi va messo prima
@@ -630,7 +659,7 @@ class Relation {
     }
 
 
-    async shiftFramesByOne(emptyFrame) {
+    shiftFramesByOne(emptyFrame) {
         if (this.currentGroup.parent == null) return;
 
         // Shifta solo i sibling attuali, quindi parti dal primo frame del primo sibling
@@ -662,7 +691,7 @@ class Relation {
                 // se il frame prima non e' vuoto e non e' in availableFrames, scambialo con l'empty frame
                 if (this.relationArray[i-1].elements.length > 0 && !this.availableFrames.includes(this.relationArray[i-1])) {
                     this.swapFrames(i-1, i);
-                    await new Promise(r => setTimeout(r, 200));
+                    //await new Promise(r => setTimeout(r, 200));
 
                     // se il frame con cui hai scambiato era lo starting frame, fermati
                     if (this.relationArray[i] == startingFrame) {
