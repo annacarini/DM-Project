@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <script type="text/javascript" src="two.min.js"></script>
@@ -20,11 +21,41 @@
             </form>
         </div>
         <div id="simulation" hidden>
-            <div>
+            <!-- COLONNA A SX-->
+            <div id="column_sx" style="width:20%; height:100%; /*background-color: rgb(188, 223, 174);*/ position:fixed;
+            box-shadow: 3px 0px 3px rgba(0, 0, 0, 0.5);">
+                <!-- TITOLO -->
+                <div style="position:fixed; top:4vh; width:16%; left:10%; transform:translate(-50%);
+                text-align:center; font-family:Calibri; font-size:2vw; font-weight:bold;">
+                    External Multi-Pass<br/>
+                    Sorting
+                </div>
+                <!-- CASELLA TESTO per spiegare cosa stiamo facendo -->
+                <div style="position:fixed; top:25vh; width:16%; height:fit-content; min-height:15%; left:10%; transform:translate(-50%); 
+                border: 3px solid rgba(0, 0, 0, 0.7); border-radius:8px; padding:10px;">
+                    <span id="text_box" style="font-family:Calibri; font-size:1.25vw;">
+                        Waiting to start.
+                    </span>
+                </div>
                 <!-- PULSANTI -->
-                <input type="button" id="step_button" value="Play one step" onclick="playOne();" style="position:fixed; top:250; left:50; z-index:1;"/>
-                <input type="button" id="play_button" value="Play" onclick="playAll();" style="position:fixed; top:300; left:50; z-index:1;"/>
-                <input type="button" id="pause_button" value="Pause" onclick="pause();" style="position:fixed; top:300; left:100; z-index:1;"/>
+                <div style="position:fixed; z-index:1; top:80vh; height:fit-content; width:fit-content;">
+                    <input type="button" id="step_button" value="Play one step" onclick="playOne();" style=""/>
+                    <input type="button" id="play_button" value="Play" onclick="playAll();" style=""/>
+                    <input type="button" id="pause_button" value="Pause" onclick="pause();" style=""/>
+                </div>
+            </div>
+            <!-- COLONNA CENTRALE -->
+            <div id="column_center" style="position:fixed; z-index:-1; top:0; left:20%; width:80%; height:100%;">
+                <!-- PARTE SOPRA (buffer)-->
+                <div id="column_center_upper_part" style="width:100%; height:36%; /*background-color: rgb(235, 139, 139);*/
+                border-bottom: 3px dashed rgba(0, 0, 0, 0.7);">
+
+                </div>
+
+                <!-- PARTE SOTTO (relazione)-->
+                <div id="column_center_lower_part" style="width:100%; height:64%; /*background-color: rgb(139, 142, 235);*/">
+
+                </div>
             </div>
         </div>
     </body>

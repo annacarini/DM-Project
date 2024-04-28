@@ -210,7 +210,7 @@ class Relation {
 
 
     // Dividi il gruppo attuale in n sotto-nodi
-    splitGroup(number, callback=null) {
+    splitGroup(number) {
 
         // Se stai dividendo in un unico gruppo non ha senso
         if (number <= 1) {
@@ -269,9 +269,6 @@ class Relation {
         // Imposta il primo gruppo come nodo attuale
         this.setCurrentGroup(this.currentGroup.children[0]);
 
-
-        // Se c'e' una callback eseguila
-        if (callback != null) callback();
     }
 
 
@@ -458,7 +455,8 @@ class Relation {
                     y: child.value[i].y,
                     size: child.value[i].size,
                     color: child.value[i].color,
-                    elements: child.value[i].getValues()
+                    elements: child.value[i].getValues(),
+                    toRefill: (i < child.value.length-1)
                 };
 
                 // svuota il frame
