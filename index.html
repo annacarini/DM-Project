@@ -21,19 +21,10 @@
         </div>
         <div id="simulation" hidden>
             <div>
-                <!-- TEMPORANEI -->
-                <input type="button" id="divide_relation" value="Divide" onclick="divideRelation();" style="position:fixed; z-index:1;"/>
-                <input type="button" id="merge_relation" value="Merge" onclick="mergeRelation();" style="position:fixed; left:50px; z-index:1;"/>
-                <br/><br/>
-                <input type="button" id="remove_first" value="Remove first" onclick="removeFirst();" style="position:fixed; z-index:1;"/>
-                <br/><br/>
-                <input type="button" id="read_current" value="Read current group" onclick="readCurrentGroup();" style="position:fixed; z-index:1;"/>
-                <br/><br/>
-                <input type="button" id="read_next" value="Read next of sibling" onclick="readNextOfCurrentGroup();" style="position:fixed; z-index:1;"/>
-                <br/><br/>
-                <input type="button" id="write_smt" value="Write on first available" onclick="writeSomething();" style="position:fixed; z-index:1;"/>
-                <br/><br/>
-                <input type="button" id="play_button" value="Play" onclick="play();" style="position:fixed; top:300; z-index:1;"/>
+                <!-- PULSANTI -->
+                <input type="button" id="step_button" value="Play one step" onclick="playOne();" style="position:fixed; top:250; left:50; z-index:1;"/>
+                <input type="button" id="play_button" value="Play" onclick="playAll();" style="position:fixed; top:300; left:50; z-index:1;"/>
+                <input type="button" id="pause_button" value="Pause" onclick="pause();" style="position:fixed; top:300; left:100; z-index:1;"/>
             </div>
         </div>
     </body>

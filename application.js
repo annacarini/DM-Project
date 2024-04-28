@@ -21,7 +21,16 @@ const States = {
 }
 
 var applicationState = States.Start;    // Tiene lo stato attuale dell'applicazione
+
+
+// PER GESTIRE L'ANIMAZIONE
+var playOneStepButton = null;
 var playButton = null;
+var pauseButton = null;
+
+var automaticPlay = true;
+var paused = true;
+var playing = false;    // per evitare di chiamare di nuovo play() fino a che la callback non e' stata chiamata
 
 
 
@@ -50,25 +59,32 @@ const fontSizeMedium = windowW/80;
 const fontSizeSmall = windowW/100;
 
 // Stili testo
-var fontStyleMediumBlack = {
+const fontStyleMediumBlack = {
     alignment: "left",
     family: "Calibri",
     size: fontSizeMedium,
     weight: 650,
     fill: "rgb(0,0,0)"
 }
-var fontStyleMediumGray = {
+const fontStyleMediumGray = {
     alignment: "left",
     family: "Calibri",
     size: fontSizeMedium,
     weight: 600,
     fill: "rgb(79,79,79)"
 }
-var fontStyleSmallBlack = {
+const fontStyleSmallBlack = {
     alignment: "left",
     family: "Calibri",
     size: fontSizeSmall,
-    weight: 650,
+    weight: 500,
+    fill: "rgb(0,0,0)"
+}
+const fontStyleSmallBlackCentered = {
+    alignment: "center",
+    family: "Calibri",
+    size: fontSizeSmall,
+    weight: 500,
     fill: "rgb(0,0,0)"
 }
 
@@ -90,7 +106,11 @@ function onBodyLoad() {
         document.getElementById("relation_size_value").innerHTML = relationSize;
     };
 
+    
+    playOneStepButton = document.getElementById("step_button"); 
     playButton = document.getElementById("play_button");
+    pauseButton = document.getElementById("pause_button");
+    pauseButton.disabled = true;    // parte disattivato
 }
 
 
@@ -102,6 +122,40 @@ function startSimulation() {
     // Mostra il div simulation
     var simulation = document.getElementById("simulation");
     simulation.removeAttribute("hidden");
+
+
+    
+    // Aggiungi controlli da tastiera (va fatto ora se no uno poteva premere la barra spaziatrice prima di avviare la simulazione)
+    
+    document.onkeydown = function(e) {
+        switch (e.key) {
+            /*
+            case "ArrowLeft":     
+                e.preventDefault();       
+                break;
+            */
+            case "ArrowRight":
+                e.preventDefault();
+                playOne();
+                break;
+
+            case " ":
+                e.preventDefault();
+                if (paused)
+                    playAll();
+                else
+                    pause();
+                break;
+
+            case "Enter":
+                e.preventDefault();
+                playOne();
+                break;
+
+            default: break;
+        }
+    }
+
 
 
 
@@ -178,10 +232,10 @@ function startSimulation() {
     two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
     
 
-    // PROVA BUFFER         constructor(x, y, length, frameSize, two)
+    // CREA BUFFER         constructor(x, y, length, frameSize, two)
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
 
-    // PROVA RELAZIONE
+    // CREA RELAZIONE
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
 
 
@@ -195,28 +249,50 @@ function startSimulation() {
 
 
 
-/*
+function playOne() {
+    // esci dalla pausa
+    paused = false;
 
-ALGORITMO RICORSIVO:
+    // disattiva riproduzione automatica
+    automaticPlay = false;
 
-1)  Inizio: crea un solo nodo che è tutta la relazione
-2)  Prendi un nodo
-3)  Se entra nel buffer:
-4) 	    Mettilo nel buffer e ordinalo
-5) 	    Se ha un nodo "fratello":
-6) 		    Ripeti da 2), con questo nuovo nodo
-7) 	    Altrimenti:
-8)		    Prendi tutti i nodi fratelli, se stesso incluso, e avvia il merge
-9)  Altrimenti:
-10) 	Dividi il nodo in due sotto-nodi
-11)	Prendi il primo di questi due sotto-nodi e ripeti da 2)
+    // disattiva pulsante pausa
+    pauseButton.disabled = true;
 
-*/
-
-
-function elaborateNode() {
-
+    play();
 }
+
+function playAll() {
+    // esci dalla pausa
+    paused = false;
+
+    // attiva riproduzione automatica
+    automaticPlay = true;
+
+    // disattiva pulsante step
+    playOneStepButton.disabled = true;
+
+    // attiva pulsante pausa
+    pauseButton.disabled = false;
+
+
+    play();
+}
+
+function pause() {
+    // disattiva pulsante pausa
+    pauseButton.disabled = true;
+
+    // attiva pulsante play one
+    playOneStepButton.disabled = false;
+
+    // attiva pulsante play
+    playButton.disabled = false;
+
+    // metti in pausa
+    paused = true;
+}
+
 
 
 
@@ -224,8 +300,12 @@ function elaborateNode() {
 function play() {
     if (relation == null || buffer == null || playButton == null) return;
 
-    // disattiva pulsante play
-    playButton.disabled = true; 
+
+    // Se stava gia' riproducendo qualcosa non fare nulla
+    if (playing) return;
+
+    playing = true;
+
 
     switch (applicationState) {
         
@@ -455,16 +535,23 @@ function play() {
     console.log("I'm in state: " + applicationState);
 }
 
-var automaticPlay = true;
-
 async function callback() {
-    if (! automaticPlay) {
-        // attiva pulsante play
-        playButton.disabled = false; 
+    playing = false;    // per dire che l'esecuzione attuale e' terminata
+    if (!paused) {
+        if (!automaticPlay) {
+            // attiva pulsante play
+            playButton.disabled = false;
+        }
+        else {
+            await new Promise(r => setTimeout(r, 500));
+            play();
+        }
     }
+    // per assicurarsi che i pulsanti non si sono incasinati nel frattempo?
     else {
-        await new Promise(r => setTimeout(r, 500));
-        play();
+        playButton.disabled = false;
+        playOneStepButton.disabled = false;
+        pauseButton.disabled = true;
     }
 }
 
@@ -548,35 +635,4 @@ function animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_
 
 
 
-
-
-// TEMPORANEI per test
-function divideRelation() {
-    if (relation == null) return;
-    relation.splitGroup(bufferSize - 1);
-}
-function mergeRelation() {
-    if (relation == null) return;
-    relation.mergeSiblings();
-}
-function removeFirst() {
-    if (relation == null) return;
-    relation.removeTheFirstFraneOfEachSibling();
-}
-function readCurrentGroup() {
-    if (relation == null) return;
-    var res = relation.readCurrentGroup();
-    console.log(res);
-}
-function readNextOfCurrentGroup() {
-    if (relation == null) return;
-    var res = relation.readOnePageOfGroup(1);
-    console.log(res);
-}
-function writeSomething() {
-    if (relation == null) return;
-    var frameToWrite = new Frame(0,0,frameSize,"gray",MAX_ELEMENTS_PER_FRAME,new Two());       // (x, y, size, color, max_elements, two)
-    frameToWrite.elements.push("PROVA");
-    console.log(relation.writeWithAnimation(frameToWrite));
-}
 

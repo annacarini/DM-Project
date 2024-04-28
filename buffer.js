@@ -13,6 +13,7 @@ class Buffer {
         this.frames = [];
 
         this.linewidth = THICK_LINE;
+        this.outputFrameColor = "rgb(210, 210, 210)";
 
         this.sortingStatus = 0;
         this._virtualFrames = Array(length, []);
@@ -20,11 +21,12 @@ class Buffer {
         this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false);
         this.frameToRefill = -1
 
-        var spaceOutputFrame = 10;
+        var spaceOutputFrame = 6;
         var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
         var framePosition = x - totalWidth/2 + frameSize/2;
+
+        // Crea i primi M-1 frame
         for (var i = 0; i < length-1; i++) {
-            //constructor(x, y, width, height, color, max_elements, two)
             var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
             newFrame.setView(1);
             this.frames.push(newFrame);
@@ -32,9 +34,15 @@ class Buffer {
             framePosition += frameSize + this.spaceBetween;
         }
 
+        // Crea output frame
         framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
-        this.outputFrame = new Frame(framePosition, y, frameSize, "rgb(255, 0, 0)", MAX_ELEMENTS_PER_FRAME, two)
-        var txt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, fontSizeSmall);
+        this.outputFrame = new Frame(framePosition, y, frameSize, this.outputFrameColor, MAX_ELEMENTS_PER_FRAME, two)
+        
+        // Aggiungi scritta "output frame"
+        var textStyle = fontStyleSmallBlackCentered;
+        textStyle.weight = 600;
+        var txt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
+        
         this.group.add(this.outputFrame.group)
         this.group.add(txt)
 

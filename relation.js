@@ -1,7 +1,7 @@
 class Relation {
 
     // Relazione, espressa come albero
-    relation = new Tree([]).root;                // l'array vuoto passato come parametro e' il campo "value" del nodo
+    relation = new TreeNode([]);                // l'array vuoto passato come parametro e' il campo "value" del nodo
 
     // Relazione espressa come array (serve comunque)
     relationArray = [];
@@ -21,9 +21,9 @@ class Relation {
     highlighterColor = "#2546cc";
     highlighterThickness = VERY_THICK_LINE;
 
-    
-    // CALLBACK per informare l'applicazione che ha fatto
-    applicationCallback = null;
+    // Valore random massimo per la relazione
+    maxRandomValue = 99;
+
 
 
     constructor(two, relationSize, x, y, width, height, preferredFrameSize, minimumFrameSize) {
@@ -193,13 +193,11 @@ class Relation {
     }
 
 
-    
     // Per generare valori random per riempire la relazione
     generateRandomValues(quantity) {
         var vals = [];
-        const maxVal = 99;
         for (let i = 0; i < quantity; i++) {
-            vals.push(Math.round(Math.random() * maxVal));
+            vals.push(Math.round(Math.random() * this.maxRandomValue));
         }
         return vals;
     }
@@ -213,9 +211,6 @@ class Relation {
 
     // Dividi il gruppo attuale in n sotto-nodi
     splitGroup(number, callback=null) {
-
-        //console.log("Splitting current group");
-        //console.log(this.currentGroup);
 
         // Se stai dividendo in un unico gruppo non ha senso
         if (number <= 1) {
@@ -277,40 +272,6 @@ class Relation {
 
         // Se c'e' una callback eseguila
         if (callback != null) callback();
-    }
-
-
-    // Unisci i siblings del nodo corrente fino a formare un unico nodo, e sostituiscilo al padre del nodo corrente
-    mergeSiblings() {
-        // Se il nodo corrente e' la radice, non fare nulla
-        if (this.currentGroup.parent == null) return;
-
-        // Prendi tutti i siblings
-        var siblings = this.currentGroup.parent.children;
-
-        // Unisci tutti i frame di tutti i siblings
-        var frames = [];
-        for (let i = 0; i < siblings.length; i++) {
-            frames = frames.concat(siblings[i].value);
-        }
-
-        // Metti questi frame come "value" del nodo padre
-        this.currentGroup.parent.value = frames;
-
-        // Ri-ordina i frame rispetto alla y e rispetto alla x, in modo da averli nello stesso
-        // ordine in cui appaiono graficamente (perche' la funzione shiftFramesByOne incasina
-        // tutto, ma servono ordinati per disegnare l'highlighter bene)
-        this.currentGroup.parent.value.sort( this.compareFramesByPosition );
-
-        // Elimina i figli
-        this.currentGroup.parent.children = [];
-
-        // Imposta il nodo padre come nodo attuale
-        this.setCurrentGroup(this.currentGroup.parent);
-
-        // Assegna il colore dell'ultimo frame a tutti i frame della lista (l'ultimo perche' cosi' e' sicuramente diverso da quello del gruppo dopo)
-        var color = frames[frames.length - 1].color;
-        this.changeGroupColor(this.currentGroup, color);
     }
 
 
@@ -418,11 +379,11 @@ class Relation {
             tutto dentro il buffer. Questa funzione restituisce tutto il gruppo, poi svuota i suoi frame, e li
             inserisce dentro l'array availableFrames (che ha prima svuotato?).
 
-        readOnePageOfGroup(index)
-            La funzione readOnePageOfGroup(index) viene usata durante la fase di merge-sort dei siblings.
-            Ti restituisce il contenuto della prima pagina non vuota del sibling "index". Se il sibling e' gia'
+        readOnePageOfChild(index)
+            La funzione readOnePageOfGroup(index) viene usata durante la fase di merge-sort dei children.
+            Ti restituisce il contenuto della prima pagina non vuota del child "index". Se il child e' gia'
             tutto vuoto, ti restituisce null. Poi svuota questa pagina e la inserisce dentro availableFrames.
-            Poi shifta tutti i sibling in modo da riportare "all'inizio" il frame vuoto.
+            Poi shifta tutti i children in modo da riportare "all'inizio" il frame vuoto.
 
 
         write(frame)
@@ -461,7 +422,6 @@ class Relation {
         
         for (let i = 0; i < this.currentGroup.value.length; i++) {
             // copia il frame dentro framesToReturn
-            //framesToReturn.push({...this.currentGroup.value[i]});
             var elems = this.currentGroup.value[i].getValues();
             framesToReturn.push({
                 x: this.currentGroup.value[i].x,
@@ -478,43 +438,6 @@ class Relation {
         return framesToReturn;
     }
 
-    readOnePageOfGroup(index) {
-        if (this.currentGroup.parent == null) return null;
-        var siblings = this.currentGroup.parent.children;
-
-        if (index >= siblings.length) return null;
-        var sib = siblings[index];
-
-        var frameToReturn = null;   // se hai gia' letto tutto il sibling, restituisce null
-
-        for (let i = 0; i < sib.value.length; i++) {
-
-            // se trovi un frame di questo sibling che non e' dentro availableFrames
-            if (!this.availableFrames.includes(sib.value[i])) {
-
-                // copia il frame
-                frameToReturn = {
-                    x: sib.value[i].x,
-                    y: sib.value[i].y,
-                    size: sib.value[i].size,
-                    color: sib.value[i].color,
-                    elements: sib.value[i].getValues()
-                };
-
-                // svuota il frame
-                sib.value[i].resetFrame();
-
-                // metti il frame vuoto dentro availableFrames cosi' sai che puoi scriverci dentro
-                this.availableFrames.push(sib.value[i]);
-
-                // shifta tutto
-                this.shiftFramesByOne(sib.value[i]);
-
-                break;
-            }
-        }
-        return frameToReturn;
-    }
 
     // restituisce (e svuota) la prima pagina non gia' caricata dentro availableFrames del figlio di indice index
     readOnePageOfChild(index) {
@@ -584,7 +507,7 @@ class Relation {
                 var end_y = this.availableFrames[i].y;
                 var end_size = this.availableFrames[i].size;
                 var animationLength = 1000;
-                animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, frame.color, animationLength, () => {
+                animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, animationLength, () => {
                     // scrivi gli elementi
                     this.availableFrames[i].fill(frame.elements);
                     // cambia il colore (serve farlo a prescindere per reimpostare l'opacita' ad 1)
@@ -605,69 +528,6 @@ class Relation {
         return res;
     }
 
-    /*
-    writeWithAnimation(frame) {
-        var res = false;
-        for (let i = 0; i < this.availableFrames.length; i++) {
-            if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
-
-                // ANIMAZIONE
-                var square = this.two.makeRectangle(frame.x, frame.y, frame.size, frame.size);
-                square.fill = frame.color;
-                //const tween = new TWEEN.Tween(this.rect_search, group).to({opacity: 0}, 2)
-                
-                var pos = { x: frame.x, y: frame.y };
-                const tween = new TWEEN.Tween(pos)
-                    .to({ x: this.availableFrames[i].x, y: this.availableFrames[i].y }, 5000)
-                    .onUpdate(function() { // Called after tween.js updates 'coords'
-                        square.translation.set(pos.x, pos.y);
-                    })
-                    .onComplete(() => {
-                        // elimina il quadrato
-                        square.remove();
-                        // scrivi gli elementi
-                        this.availableFrames[i].fill(frame.elements);
-                        // cambia il colore
-                        this.availableFrames[i].setColor(frame.color);
-                    });
-        
-                tween.start();
-                //requestAnimationFrame(this.animate.bind(this));
-
-                res = true;
-                break;
-            }
-        }
-        return res;
-    }
-    */
-
-
-    // TEMPORANEO, per testare lo scorrimento dei frame
-    removeTheFirstFraneOfEachSibling() {
-        if (this.currentGroup.parent == null) return;   // facciamo solo se ha dei sibling
-
-        // Prendi tutti i siblings
-        var siblings = this.currentGroup.parent.children;
-
-        // Resetta il primo frame di ogni sibling, e salvalo dentro removedFrames
-        for (let i = 0; i < siblings.length; i++) {
-            var first = siblings[i].value[0];          // [shift sarebbe tipo "pop left", cioe' rimuove il primo elemento di un array e lo restituisce]
-            first.resetFrame();
-            this.availableFrames.push(first);
-        }
-
-        
-        // shifta tutti i frame a partire dal secondo in poi
-        for (let i = 0; i < this.availableFrames.length; i++) {
-            //console.log("removing empty space created by group: " + i);
-            this.shiftFramesByOne(this.availableFrames[i]);
-        }
-
-        // highlight dei sibling
-        this.highlightGroup(this.currentGroup.parent);
-
-    }
 
     shiftFramesByOne(emptyFrame) {
 
@@ -700,7 +560,6 @@ class Relation {
                 // se il frame prima non e' vuoto e non e' in availableFrames, scambialo con l'empty frame
                 if (this.relationArray[i-1].elements.length > 0 && !this.availableFrames.includes(this.relationArray[i-1])) {
                     this.swapFrames(i-1, i);
-                    //await new Promise(r => setTimeout(r, 200));
 
                     // se il frame con cui hai scambiato era lo starting frame, fermati
                     if (this.relationArray[i] == startingFrame) {
@@ -718,56 +577,6 @@ class Relation {
         }
     }
 
-    /*
-    shiftFramesByOne(emptyFrame) {
-
-        // Shifta solo i sibling attuali, quindi parti dal primo frame del primo sibling
-        var startingFrame = this.currentGroup.children[0].value[0];
-
-        // Se emptyFrame e' proprio lo startingFrame, non fare nulla
-        if (emptyFrame == startingFrame) {
-            return;
-        }
-
-        // Itera tutti i frame in ordine inverso. Quando incontri emptyFrame inizia a shiftare
-        // tutti di una posizione in avanti. Quando arrivi a startingFrame, shifta anche lui
-        // e poi fermati. Se prima di arrivare a startingFrame trovi un frame appartenente ad
-        // availableFrames, fermati e basta senza shiftarlo.
-
-        var shifting = false;
-        var currentFrame;
-        for (var i = this.relationArray.length-1; i > 0; i--) {
-
-            //console.log(i);
-            currentFrame = this.relationArray[i];
-
-            if (!shifting) {
-                if (currentFrame == emptyFrame && currentFrame != startingFrame) {
-                    shifting = true;
-                }
-            }
-            if (shifting) {
-                // se il frame prima non e' vuoto e non e' in availableFrames, scambialo con l'empty frame
-                if (this.relationArray[i-1].elements.length > 0 && !this.availableFrames.includes(this.relationArray[i-1])) {
-                    this.swapFrames(i-1, i);
-                    //await new Promise(r => setTimeout(r, 200));
-
-                    // se il frame con cui hai scambiato era lo starting frame, fermati
-                    if (this.relationArray[i] == startingFrame) {
-                        console.log("trovato starting frame, posizione: " + i);
-                        break;
-                    }
-                }
-                else {
-                    break;
-                }
-
-
-            }
-
-        }
-    }
-    */
 
     // Questa scambia due frame, sia cambiando il loro indice dentro relationArray, sia
     // scambiando le loro posizioni

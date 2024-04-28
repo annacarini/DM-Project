@@ -15,6 +15,11 @@ class Frame {
         this.size = size;
         this.color = color;
 
+        // Font usato per scrivere i numeri dentro i frame (la misura deve dipendere dalla dimensione del frame)
+        this.textStyle = fontStyleSmallBlackCentered;
+        this.textStyle.weight = 450;
+        this.textStyle.size = this.size / 6.8;
+
         this.sorted = false;
         this.view = 1 // 0 relation, 1 buffer
 
@@ -130,17 +135,17 @@ class Frame {
 
 
     fill(new_elements) {
-        this.elements = []
+        this.elements = [];
 
-        var offset = (this.size) / this.max_elements
-        this.rect_content.height = (offset * new_elements.length) - this.linewidth
-        this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2
+        var offset = (this.size) / this.max_elements;
+        this.rect_content.height = (offset * new_elements.length) - this.linewidth;
+        this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2;
 
         for (var i = 0; i < new_elements.length; i++) {
-            var text = this.two.makeText(new_elements[i], this.rect_content.position.x, (i - ((this.max_elements - 1) / 2)) * offset)
-            text.visible = this.view
+            var text = this.two.makeText(new_elements[i], this.rect_content.position.x, (i - ((this.max_elements - 1) / 2)) * offset, this.textStyle);
+            text.visible = this.view;
             this.elements.push([new_elements[i], text]);
-            this.group.add(text)
+            this.group.add(text);
         }
     }
 
