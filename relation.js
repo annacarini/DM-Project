@@ -149,6 +149,10 @@ class Relation {
         }
         this.highlighters = [];
 
+        if (groupNode == null) {    // cosi' chiamiamo la funzione con parametro null per de-evidenziare
+            return;
+        }
+
         // prendi tutti i valori di questo nodo e di tutti i suoi discendenti
         var group = groupNode.getValueOfAllChildren();
 
@@ -178,6 +182,8 @@ class Relation {
         // Se c'e' una callback eseguila
         if (callback != null) callback();
     }
+
+    
 
     makeRectangleAroundFrames(firstFrame, lastFrame) {
         var centerX = (firstFrame.x + lastFrame.x)/2;

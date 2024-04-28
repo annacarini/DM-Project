@@ -100,10 +100,11 @@ const Messages = {
     currentGroupFitsInBuffer: "The current group fits in the buffer, so it will be copied there.",
     childrenMustBeMergeSorted: "These sub-groups have been individually sorted, now they must be merged.",
     outputFrameFull: "The output frame is full, so it must be written back in the relation.",
-    emptyFrameInBuffer: "The buffer has an empty frame. It must check whether it needs to load a new page of a sub-group.",
+    emptyFrameInBuffer: "The buffer has an empty frame. It must load a new page of the corresponding sub-group.",
     bufferContentBeingSorted: "The content of the buffer must be sorted.",
     currentGroupSorted: "The current group has been sorted.",
     childrenBeingMergeSorted: "A page of each sub-group has been loaded in the buffer. They must be merge-sorted.",
+    finished: "Done! The whole relation has been sorted."
 }
 
 
@@ -404,6 +405,8 @@ function play() {
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
                 applicationState = States.Finish;
+                relation.highlightGroup(null);      // de-evidenzia la relazione
+                showMessage(Messages.finished);
                 callback();
             }
             // Altrimenti vedi se ha un fratello
