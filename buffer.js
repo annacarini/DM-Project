@@ -37,7 +37,8 @@ class Buffer {
         // Crea output frame
         framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
         this.outputFrame = new Frame(framePosition, y, frameSize, this.outputFrameColor, MAX_ELEMENTS_PER_FRAME, two)
-        
+        this.outputFrame.setSorted(true)
+
         // Aggiungi scritta "output frame"
         var textStyle = fontStyleSmallBlackCentered;
         textStyle.weight = 600;
@@ -134,29 +135,6 @@ class Buffer {
         return false
     }
 
-
-    /*_checkVirtualEmptiness() {
-        for (var i = 0; i < this._virtualFrames.length; i++) {
-            if (this._virtualFrames[i].length)
-                return false
-        }
-        return true
-    }
-
-    _checkVirtualToRefill() {
-        for (var i = 0; i < this._virtualFrames.length; i++) {
-            if (!this._virtualFrames[i].length && this.frameRefilled[i])
-                return i + 1
-        }
-        return false
-    }
-
-    _checkVirtualToEmpty() {
-        if (this._virtualOutputFrame.length == MAX_ELEMENTS_PER_FRAME)
-            return true
-        return false
-    }*/
-
     /***********************************************************/
 
 
@@ -219,24 +197,6 @@ class Buffer {
     }
 
 
-    /*sort() {
-        var tweens = []
-        this.sortingStatus = this._checkVirtualEmptiness() + (this._checkVirtualToRefill() << 2) + (this._checkVirtualToEmpty() * 2)
-        while (!this.sortingStatus) {
-            var ret = this._virtualFindMin()
-            var frameIndx = ret[0]
-            var indx = ret[1]
-            var writeTweens = this.writeFromToAnimation(frameIndx, indx)
-            if (tweens.length)
-                tweens[tweens.length - 1].chain(writeTweens[0])
-            tweens.push(writeTweens[0], writeTweens[1])
-            this._virtualWriteFromToAnimation(frameIndx, indx)
-            this.sortingStatus = this._checkVirtualEmptiness() + (this._checkVirtualToRefill() << 2) + (this._checkVirtualToEmpty() * 2)
-        }
-        return tweens
-    }*/
-
-
     _findLastValues(n) {
         var values = []
         for (var i = 0; i < this.frames.length; i++) {
@@ -295,6 +255,7 @@ class Buffer {
             callback()
     }
 
+
     sortAnimation(sortCallback = () => {}, mergeCallback = () => {}, merge = false) {
         this.sort(merge)
         console.log("Prima del tween quando merge", merge)
@@ -315,36 +276,6 @@ class Buffer {
         if (index >= this.length) return null;
         return [this.frames[index].x, this.frames[index].y];
     }
-
-    /*
-    readWithAnimation(frames, callback=null) {
-        console.log(frames);
-        
-        // Per chiamare la callback dobbiamo assicurarci che tutte le animazioni (sono frames.length) sono
-        // terminate. Quindi in questa funzione teniamo traccia di quante animazioni terminano
-        var callbacksReceived = 0;
-        var callbacksCounter = () => {
-            callbacksReceived++;
-            if (callbacksReceived >= frames.length) {
-                if (callback != null) callback();
-            }
-        }
-
-        for (var i = 0; i < frames.length; i++) {
-            var frame = frames[i];
-            // Crea animazione
-            var animationLength = 2;
-            animateOneSquare(frame.x, frame.y, this.frames[i].x, this.frames[i].y, frame.size, frame.color, animationLength, () => {
-                // Quando l'animazione e' completa esegui questo:
-                this.frames[i].copy(frame);
-                this._virtualFrames[i] = frame.elements;
-                this.frameRefilled[i] = true;
-                callbacksCounter();
-            }).bind(this);
-        }
-    }
-    */
-
 
 
     // TEMPORANEA per testare se la scrittura dal buffer alla relazione funziona.
@@ -372,7 +303,8 @@ class Buffer {
             y: this.outputFrame.y,
             size: this.outputFrame.size,
             color: this.outputFrame.color,
-            elements: this.outputFrame.getValues()
+            elements: this.outputFrame.getValues(),
+            sorted: this.outputFrame.sorted
         }
         this.outputFrame.resetFrame();
         return res;

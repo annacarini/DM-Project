@@ -88,7 +88,33 @@ const fontStyleSmallBlackCentered = {
     fill: "rgb(0,0,0)"
 }
 
+// Per gestire il cambio dei colori nella relation al merge
+var newColor
 
+
+function createCustomTexture(width, height, backgroundColor, barColor, barWidth, barGap) {
+    // Crea un nuovo canvas
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    var context = canvas.getContext('2d');
+    
+    // Disegna il colore di sfondo
+    context.fillStyle = backgroundColor;
+    context.fillRect(0, 0, width, height);
+    
+    // Disegna le barre nere sopra al colore di sfondo
+    context.fillStyle = barColor;
+    var x = 0;
+    while (x < width) {
+      context.fillRect(x, 0, barWidth, height);
+      x += barWidth + barGap;
+    }
+    
+    // Crea una nuova texture utilizzando il canvas
+    var texture = new Two.Texture(canvas);
+    return texture;
+}
 
 
 function onBodyLoad() {
@@ -310,7 +336,7 @@ function play() {
     switch (applicationState) {
         
         case States.Start:
-            relation.highlightGroup(relation.getCurrentGroup(), () => {
+            relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
                 applicationState = States.GroupToSort;
                 callback();
             });
@@ -401,8 +427,11 @@ function play() {
                     applicationState = States.GroupToMerge;
                 }
                 else {
-                    console.log("current group has a sibling");
-                    relation.setCurrentGroup(next_sibling);
+                    console.log("current group has siblings left");
+                    if (currentGroup.value.length > buffer.length - 1)
+                        relation.setCurrentGroup(next_sibling);
+                    else
+                        relation.setCurrentGroupToSort(next_sibling);
                     applicationState = States.GroupToSort;
                 }
                 callback();
@@ -426,6 +455,9 @@ function play() {
                 end_size = [];
                 color = [];
                 var animationLength = 1000;
+
+                // Genero un nuovo colore che verrà utilizzato quando i frames verranno scritti nella relazioni
+                newColor = relation.generateNewColor()
 
                 // Carica una pagina di ogni child dentro framesToWrite
                 for (let i = 0; i < siblings.length; i++) {
@@ -511,9 +543,11 @@ function play() {
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
             // Imposta il suo colore pari al colore dell'ultimo figlio
-            frame.color = relation.getColorOfLastChild();
+            //frame.color = relation.getColorOfLastChild();
+            frame.color = newColor
+            console.log("IL NUOVO COLORE:", newColor)
             // Copia l'output frame nella relazione
-            relation.writeWithAnimation(frame, true, () => {
+            relation.writeWithAnimation(frame, frame.color, () => {
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
                     console.log("buffer still contains something");

@@ -13,17 +13,20 @@ class Relation {
     availableFrames = [];
 
     // Rettangoli (solo bordo) che servono ad evidenziare il gruppo preso in considerazione
-    highlighters = [];  
+    highlighters = []; 
+    highlightersSort = [];
 
     // PARAMETRI PER GRAFICA
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
     frameColor = "#6fdcff";
-    highlighterColor = "#2546cc";
+    highlightersSortColor = "#00149a";
+    highlightersSortMargin = 2;
+    highlightersColor = "#2546cc";
+    highlightersMargin = 8;
     highlighterThickness = VERY_THICK_LINE;
 
     // Valore random massimo per la relazione
     maxRandomValue = 99;
-
 
 
     constructor(two, relationSize, x, y, width, height, preferredFrameSize, minimumFrameSize) {
@@ -72,11 +75,9 @@ class Relation {
             }
         }
 
-
         // Poni il nodo attuale uguale a tutta la relazione
         this.currentGroup = this.relation;
     }
-
 
 
     // RICORSIVA, non e' la soluzione ideale ma per ora funziona.
@@ -109,17 +110,30 @@ class Relation {
     }
 
 
+    setCurrentGroupToSort(group) {
+        this.currentGroup = group
+
+        this.highlightGroup(this.currentGroup, "highlightersSort");
+    }
+
+
     setCurrentGroup(group) {
         this.currentGroup = group;
 
+        // Elimino i grouppi da sortare evidenziati in precedenza
+        for (var i = this.highlightersSort.length - 1; i >= 0; i--) {
+            this.highlightersSort[i].remove();
+        }
+
         // Evidenzia il gruppo
-        this.highlightGroup(this.currentGroup);
+        this.highlightGroup(this.currentGroup, "highlighters");
     }
 
 
     getCurrentGroup() {
         return this.currentGroup;
     }
+
 
     // Trova l'indice di currentGroup tra i suoi sibling. Se c'e' un altro sibling dopo lui lo restituisce, se no ritorna null
     getNextSibling() {
@@ -136,18 +150,20 @@ class Relation {
         return null;
     }
 
+
     emptyAvailableFrames() {
         this.availableFrames = [];
     }
 
 
     // Disegna rettangoli intorno ai frame (CONSECUTIVI!) contenuti nel campo values del nodo "groupNode". Salva i rettangoli dentro "highlighters"
-    highlightGroup(groupNode, callback=null) {
+    highlightGroup(groupNode, nameHighl, callback=null) {
         // elimina gli highlighter gia' esistenti
-        for (var i = this.highlighters.length - 1; i >= 0; i--) {
-            this.highlighters[i].remove();
+        var highlighters = this[nameHighl]
+        for (var i = highlighters.length - 1; i >= 0; i--) {
+            highlighters[i].remove();
         }
-        this.highlighters = [];
+        highlighters = [];
 
         // prendi tutti i valori di questo nodo e di tutti i suoi discendenti
         var group = groupNode.getValueOfAllChildren();
@@ -160,32 +176,34 @@ class Relation {
 
             // Se questo frame e' su una nuova riga rispetto al precedente, disegna l'highlighter per la riga precedente
             if (currentFrame.y != lastFrameOfRow.y) {
-                this.highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, lastFrameOfRow));
+                highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, lastFrameOfRow, this[nameHighl + "Color"], this[nameHighl + "Margin"]));
                 
                 // metti questo come first frame of row
                 firstFrameOfRow = currentFrame;
             }
             // Se e' l'ultimo elemento del gruppo, disegna l'highlighter
             if (i == group.length - 1) {
-                this.highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, currentFrame));
+                highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, currentFrame, this[nameHighl + "Color"], this[nameHighl + "Margin"]));
             }
 
             // metti questo come last frame of row       
             lastFrameOfRow = currentFrame;
         } 
 
+        this[nameHighl] = highlighters
 
         // Se c'e' una callback eseguila
         if (callback != null) callback();
     }
 
-    makeRectangleAroundFrames(firstFrame, lastFrame) {
+
+    makeRectangleAroundFrames(firstFrame, lastFrame, color, marginDistance) {
         var centerX = (firstFrame.x + lastFrame.x)/2;
         var centerY = firstFrame.y;
-        var width = lastFrame.x - firstFrame.x + firstFrame.size + 5;
-        var height = firstFrame.size + 5;
+        var width = lastFrame.x - firstFrame.x + firstFrame.size + marginDistance;
+        var height = firstFrame.size + marginDistance;
         var rect = this.two.makeRectangle(centerX, centerY, width, height);
-        rect.stroke = this.highlighterColor;
+        rect.stroke = color;
         rect.linewidth = this.highlighterThickness;
         rect.noFill();
         
@@ -203,11 +221,7 @@ class Relation {
     }
 
 
-
-
-
     /********************* SPLIT E MERGE DEI NODI *********************/
-
 
     // Dividi il gruppo attuale in n sotto-nodi
     splitGroup(number, callback=null) {
@@ -266,9 +280,12 @@ class Relation {
         // Rimuovi i frame dal gruppo attuale (perche' sono stati suddivisi tra i suoi children)
         this.currentGroup.value = [];
 
-        // Imposta il primo gruppo come nodo attuale
-        this.setCurrentGroup(this.currentGroup.children[0]);
-
+        // Imposta il primo gruppo come nodo attuale. Se il primo figlio del gruppo corrente ha
+        // meno frames del buffer allora va sortato. Quindi è creato un altro highlighter
+        if (this.currentGroup.children[0].value.length > number)
+            this.setCurrentGroup(this.currentGroup.children[0]);
+        else
+            this.setCurrentGroupToSort(this.currentGroup.children[0]);
 
         // Se c'e' una callback eseguila
         if (callback != null) callback();
@@ -333,6 +350,7 @@ class Relation {
         }
     }
 
+
     differenceBetweenColors(color1, color2) {
         //return Math.abs(color1[0] - color2[0]) + Math.abs(color1[1] - color2[1]) + Math.abs(color1[2] - color2[2]);
         //return Math.max(Math.abs(color1[0] - color2[0]), Math.abs(color1[1] - color2[1]), Math.abs(color1[2] - color2[2]));
@@ -350,9 +368,72 @@ class Relation {
         return [h, s, l];
     }
 
+
     stringifyColor(col) {
         return "hsl(" + col[0] + ',' + col[1] + '%,' + col[2] + '%)';
     }
+
+
+    // Converte un colore nel formato stringa hsl in un array di 3 elementi
+    hslToArray(color) {
+        var match = color.match(/(\d+(\.\d+)?)/g)
+        const h = parseFloat(match[0]);
+        const s = parseFloat(match[1]);
+        const l = parseFloat(match[2]);
+
+        return [h, s, l]
+    }
+
+
+    // Converte un colore esadecimale in un una stringa hsl
+    hexToHSL(hex) {
+        // Rimuovi l'eventuale # all'inizio della stringa
+        hex = hex.replace('#', '');
+        
+        // Estrai i valori RGB dalla stringa esadecimale
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        
+        // Calcola il massimo e il minimo tra i valori RGB
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        
+        // Calcola la luminosità
+        var l = (max + min) / 2;
+        
+        let h, s;
+        if (max === min) {
+            // Quando il massimo è uguale al minimo, il colore è grigio
+            h = 0; // La tonalità è arbitraria in questo caso
+            s = 0; // La saturazione è 0 in questo caso
+        } else {
+            // Calcola la saturazione
+            s = l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
+            
+            // Calcola la tonalità
+            switch (max) {
+                case r:
+                    h = (g - b) / (max - min) + (g < b ? 6 : 0);
+                    break;
+                case g:
+                    h = (b - r) / (max - min) + 2;
+                    break;
+                case b:
+                    h = (r - g) / (max - min) + 4;
+                    break;
+            }
+            h /= 6;
+        }
+        
+        // Converti i valori in gradi e percentuali e restituisci la stringa HSL
+        h = Math.round(h * 360);
+        s = Math.round(s * 100);
+        l = Math.round(l * 100);
+        
+        return `hsl(${h},${s}%,${l}%)`;
+    }
+
 
     // serve durante la fase di scrittura del merge-sort
     getColorOfLastChild() {
@@ -366,6 +447,52 @@ class Relation {
         return children[children.length - 1].value[0].color;
     }
 
+
+    // E' una funzione ricorsiva che esplora tutto l'albero e ritorna i colori
+    // di tutti i gruppi
+    _retrieveColors(tree) {
+        var colors = []
+
+        for (var i = 0; i < tree.children.length; i++) {
+            if (tree.children[i] instanceof TreeNode) {
+                var newColors = this._retrieveColors(tree.children[i])
+                for (var j = 0; j < newColors.length; j++)
+                    colors.push(newColors[j])
+            }
+        }
+        if (tree.value.length)
+            colors.push(tree.value[0].color)
+        return colors
+    }
+
+
+    // Genera un nuovo colore. Dopo aver trovato tutti i colori presenti nella relazione
+    // e averli convertiti nel formato array, va a creare un colore casuale e lo confronta
+    // con tutti gli altri colori della relazione. Se è differente da tutti lo ritorna altrimenti
+    // genera un altro colore con cui fare la comparazione. Ci prova per un massimo di 10 volte.
+    generateNewColor() {
+        var colors = this._retrieveColors(this.relation);
+        for (var j = 0; j < colors.length; j++) {
+            if (colors[j][0] == '#')
+                colors[j] = this.hexToHSL(colors[j])
+            colors[j] = this.hslToArray(colors[j])
+        }
+        var i = 0;
+        var newColor = this.randomColor();
+        while (i < 10) {
+            var differents = 0;
+            console.log("Stiamo dentro il ciclo while!", i)
+            for (var color of colors) {
+                if (this.differenceBetweenColors(color, newColor) > 60)
+                    differents += 1
+            }
+            if (differents == colors.length) // Se è diverso da tutti i colori esco
+                return this.stringifyColor(newColor);
+            i++;
+            newColor = this.randomColor();
+        }
+        return this.stringifyColor(newColor)
+    }
 
 
     /**************** OPERAZIONI DI SCRITTURA E LETTURA ****************/
@@ -485,6 +612,7 @@ class Relation {
                 this.availableFrames[i].fill(frame.elements);
                 // cambia il colore
                 this.availableFrames[i].setColor(frame.color);
+                this.availableFrames[i].setSorted(frame.sorted);
                 res = true;
                 break;
             }
@@ -492,14 +620,15 @@ class Relation {
         return res;
     }
 
-    writeWithAnimation(frame, changeColor, callback=null) {
+
+    writeWithAnimation(frame, newColor, callback=null) {
         var res = false;
         for (let i = 0; i < this.availableFrames.length; i++) {
             if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
 
                 var final_color = this.availableFrames[i].color;
-                if (changeColor) {
-                    final_color = frame.color;
+                if (newColor) {
+                    final_color = newColor;
                 }
 
                 // ANIMAZIONE
@@ -512,7 +641,7 @@ class Relation {
                     this.availableFrames[i].fill(frame.elements);
                     // cambia il colore (serve farlo a prescindere per reimpostare l'opacita' ad 1)
                     this.availableFrames[i].setColor(final_color);
-
+                    this.availableFrames[i].setSorted(frame.sorted);
                     // se questo era l'ultimo availableFrame (ed ora e' stato riempito), svuota l'array
                     if (i == this.availableFrames.length - 1) {
                         this.emptyAvailableFrames();
