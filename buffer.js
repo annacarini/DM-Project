@@ -143,7 +143,7 @@ class Buffer {
             var frame = frames[i];
             this.frames[i].copy(frame);
             this._virtualFrames[i] = frame.elements;
-            this.frameRefilled[i] = true;
+            this.frameRefilled[i] = frame.toRefill;
         }
 
         // Se c'e' una callback chiamala
@@ -153,7 +153,8 @@ class Buffer {
 
     writeOnBufferFrame(frame, indx, callback = null) {
         this.frames[indx].copy(frame)
-        this.frameRefilled[indx] = true;
+        console.log("Il frame: ", indx, " da refillare?: ", frame.toRefill)
+        this.frameRefilled[indx] = frame.toRefill;
         if (callback != null) callback();
     }
 
@@ -262,11 +263,14 @@ class Buffer {
         var tween = new TWEEN.Tween(null).to(null, 200).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
                 this.frameToRefill = this.checkToRefill();
-                if (merge && this.frameToRefill != -1) {
+                console.log("Il frame da refillare: ", this.frameToRefill, " refilled: ", this.frameRefilled[this.frameToRefill])
+                if (merge && (this.frameToRefill != -1)) {
                     this.frameRefilled[this.frameToRefill] = false;
-                    mergeCallback();}
+                    mergeCallback();
+                }
                 else
-                    sortCallback();}
+                    sortCallback();
+            }
         )
         tween.start()
     }

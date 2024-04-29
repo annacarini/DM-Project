@@ -1,3 +1,4 @@
+"use strict";
 
 
 // PARAMETRI SIMULAZIONE
@@ -12,7 +13,7 @@ const States = {
 	GroupToSort: "Current group is not sorted",
 	GroupInBuffer: "Current group loaded in buffer, waiting to be sorted",
 	OutputFrameFullSorting: "Sorting, the output frame is full",
-    GroupSorted: "Current group is sorted",
+    GroupSorted: "Current group is being sorted",
     GroupToMerge: "Current group has children that must be merge-sorted",
     ChildrenInBuffer: "Children of current group are in the buffer, waiting to be merge-sorted",
     OneEmptyFrameInBuffer: "One empty frame in buffer during merge-sort",
@@ -21,7 +22,6 @@ const States = {
 }
 
 var applicationState = States.Start;    // Tiene lo stato attuale dell'applicazione
-
 
 // PER GESTIRE L'ANIMAZIONE
 var playOneStepButton = null;
@@ -37,6 +37,9 @@ var playing = false;    // per evitare di chiamare di nuovo play() fino a che la
 // PARAMETRI PER GRAFICA
 
 var two;
+
+var textBox = null;     // Casella a sx in cui appaiono messaggi
+var showingRelationContent = true; 
 
 // Misure dello schermo
 var windowW = window.innerWidth;
@@ -91,7 +94,7 @@ const fontStyleSmallBlackCentered = {
 // Per gestire il cambio dei colori nella relation al merge
 var newColor
 
-
+// Crea la una texture con delle righe
 function createCustomTexture(width, height, backgroundColor, barColor, barWidth, barGap) {
     // Crea un nuovo canvas
     var canvas = document.createElement('canvas');
@@ -116,11 +119,26 @@ function createCustomTexture(width, height, backgroundColor, barColor, barWidth,
     return texture;
 }
 
+// MESSAGGI
+const Messages = {
+	currentGroupMustBeSorted: "The current group must be sorted.",
+    currentGroupDoesNotFit: "The current group doesn't fit in the buffer, so must be split.",
+    currentGroupFitsInBuffer: "The current group fits in the buffer, so it will be copied there.",
+    childrenMustBeMergeSorted: "These sub-groups have been individually sorted, now they must be merged.",
+    outputFrameFull: "The output frame is full, so it must be written back in the relation.",
+    emptyFrameInBuffer: "The buffer has an empty frame. It must load a new page of the corresponding sub-group.",
+    bufferContentBeingSorted: "The content of the buffer must be sorted.",
+    currentGroupSorted: "The current group has been sorted.",
+    childrenBeingMergeSorted: "A page of each sub-group has been loaded in the buffer. They must be merge-sorted.",
+    finished: "Done! The whole relation has been sorted."
+}
+
 
 function onBodyLoad() {
 
     // Resetta gli slider
     document.menu_form.reset();
+    document.getElementById("show_relation_content").checked = true;
 
     // Handler slider
     document.getElementById("buffer_size").onchange = function(event) {
@@ -132,6 +150,7 @@ function onBodyLoad() {
         document.getElementById("relation_size_value").innerHTML = relationSize;
     };
 
+    textBox = document.getElementById("text_box"); 
     
     playOneStepButton = document.getElementById("step_button"); 
     playButton = document.getElementById("play_button");
@@ -167,7 +186,7 @@ function startSimulation() {
 
             case " ":
                 e.preventDefault();
-                if (paused)
+                if (paused || !automaticPlay)
                     playAll();
                 else
                     pause();
@@ -182,46 +201,32 @@ function startSimulation() {
         }
     }
 
+    // Aggiungi handler allo slider che mostra/nasconde i numeri della relazione
+    document.getElementById("show_relation_content").onchange = function() {
+        showingRelationContent = !showingRelationContent;
+        if (relation == null) return;
+        else {
+            relation.showContent(showingRelationContent);
+        }
+    };
 
 
 
-    /* COLONNA A SINISTRA */
-    var left_column_width = windowW / 5;
-    var left_column_height = windowH;
-    var left_column_center_x = left_column_width / 2;
-    var left_column_center_y = centerY;
-    var leftColumn = new Section(left_column_center_x, left_column_center_y, left_column_width, left_column_height);
-
-    /* COLONNA CENTRALE */
-    var center_column_width = windowW - left_column_width;
-    var center_column_height = windowH;
-    var center_column_center_x = left_column_width + center_column_width / 2;
-    var center_column_center_y = centerY;
-    var centerColumn = new Section(center_column_center_x, center_column_center_y, center_column_width, center_column_height);
-
-    /* PARTE AL CENTRO SOPRA (dove mettiamo il buffer) */
-    var upper_part_width = center_column_width;
-    var upper_part_height = windowH / 2.8;
-    var upper_part_center_x = center_column_center_x;
-    var upper_part_center_y = upper_part_height / 2;
-    var upperPart = new Section(upper_part_center_x, upper_part_center_y, upper_part_width, upper_part_height);
-
-    /* PARTE AL CENTRO SOTTO (dove mettiamo la relation) */
-    var lower_part_width = center_column_width;
-    var lower_part_height = windowH - upper_part_height;
-    var lower_part_center_x = center_column_center_x;
-    var lower_part_center_y = upper_part_height + lower_part_height / 2;
-    var lowerPart = new Section(lower_part_center_x, lower_part_center_y, lower_part_width, lower_part_height);
-
-
-
+    var leftColumn = new Section(document.getElementById("column_sx"));
+    var centerColumn = new Section(document.getElementById("column_center"));
+    var upperPart = new Section(document.getElementById("column_center_upper_part"));
+    var lowerPart = new Section(document.getElementById("column_center_lower_part"));
+    
+    
     // Avvia Two
     two = new Two({
         type: Two.Types.svg,
         fullscreen: true,
-        //fitted: true,
-        autostart: true
-    }).appendTo(simulation);
+        //fitted: false,
+        //width: 0.8*windowW, //centerColumn.width,
+        //height: windowH, //centerColumn.height,
+        autostart: true,
+    }).appendTo(document.getElementById("column_center"));
 
 
     // questo non funziona:
@@ -236,15 +241,6 @@ function startSimulation() {
 
     // Sfondo
     //two.renderer.domElement.style.background = '#fcb215';
-
-    // Linee che separano le sezioni
-    // verticale tra colonna sx e colonna centrale:
-    var line1 = two.makeLine(leftColumn.topRightCorner.x, leftColumn.topRightCorner.y, leftColumn.bottomRightCorner.x, leftColumn.bottomRightCorner.y);
-    line1.linewidth = MEDIUM_LINE;
-    // orizzontale tra upper e lower
-    var line2 = two.makeLine(upperPart.bottomLeftCorner.x, upperPart.bottomLeftCorner.y, upperPart.bottomRightCorner.x, upperPart.bottomRightCorner.y);
-    line2.linewidth = MEDIUM_LINE;
-
 
 
     // Scritta "Buffer"   makeText(message, x, y, style)
@@ -266,11 +262,14 @@ function startSimulation() {
 
 
 
-
-
-
     // updates the drawing area and actually renders the content
     two.update();
+}
+
+
+
+function showMessage(text) {
+    textBox.innerHTML = text;
 }
 
 
@@ -301,6 +300,8 @@ function playAll() {
     // attiva pulsante pausa
     pauseButton.disabled = false;
 
+    // leva i messaggi
+    showMessage("");
 
     play();
 }
@@ -336,6 +337,16 @@ function play() {
     switch (applicationState) {
         
         case States.Start:
+            // Questo controllo e' per mostrare il messaggio giusto
+            if (!automaticPlay) {
+                if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                    showMessage(Messages.currentGroupDoesNotFit);
+                }
+                else {
+                    showMessage(Messages.currentGroupFitsInBuffer);
+                }
+            }
+
             relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
                 applicationState = States.GroupToSort;
                 callback();
@@ -346,22 +357,31 @@ function play() {
             var currentGroup = relation.getCurrentGroup();
             // Se il gruppo non entra nel buffer, splittalo e rimani in questo stato
             if (currentGroup.value.length > bufferSize - 1) {
-                console.log("current group doesn't fit buffer, splitting it");
-                relation.splitGroup(bufferSize - 1, () => {
-                    callback();
-                });
+                relation.splitGroup(bufferSize - 1);
+
+                // Questo controllo e' per mostrare il messaggio giusto
+                if (!automaticPlay) {
+                    if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                        showMessage(Messages.currentGroupDoesNotFit);
+                    }
+                    else {
+                        showMessage(Messages.currentGroupFitsInBuffer);
+                    }
+                }
+
+                callback();
             }
             // Altrimenti, leggi il contenuto del primo gruppo e scrivilo nel buffer
             else {
                 var frames = relation.readCurrentGroup();
                 // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
-                start_x = [];
-                start_y = [];
-                end_x = [];
-                end_y = [];
-                start_size = [];
-                end_size = [];
-                color = [];
+                var start_x = [];
+                var start_y = [];
+                var end_x = [];
+                var end_y = [];
+                var start_size = [];
+                var end_size = [];
+                var color = [];
                 var animationLength = 1000;
                 for (var i = 0; i < frames.length; i++) {
                     start_x.push(frames[i].x);
@@ -377,6 +397,7 @@ function play() {
                     // Quando terminano le animazioni, scrivi i dati nel buffer
                     buffer.writeOnBuffer(frames, () => {
                         applicationState = States.GroupInBuffer;
+                        if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
                         callback();
                     });
                 });
@@ -387,6 +408,7 @@ function play() {
             // Avvia il sort
             buffer.sortAnimation(() => {
                 applicationState = States.OutputFrameFullSorting;
+                if (!automaticPlay) showMessage(Messages.outputFrameFull);
                 callback();
             });
             break;
@@ -398,12 +420,14 @@ function play() {
             relation.writeWithAnimation(frame, false, () => {
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
-                    console.log("buffer still contains something");
+                    //console.log("buffer still contains something");
                     applicationState = States.GroupInBuffer;
+                    if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
-                    console.log("buffer is empty");
+                    //console.log("buffer is empty");
                     applicationState = States.GroupSorted;
+                    if (!automaticPlay) showMessage(Messages.currentGroupSorted);
                 }
                 callback();
             });
@@ -415,6 +439,8 @@ function play() {
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
                 applicationState = States.Finish;
+                relation.highlightGroup(null);      // de-evidenzia la relazione
+                showMessage(Messages.finished);
                 callback();
             }
             // Altrimenti vedi se ha un fratello
@@ -425,6 +451,7 @@ function play() {
                     console.log("current group has no siblings left");
                     relation.setCurrentGroup(currentGroup.parent);
                     applicationState = States.GroupToMerge;
+                    if (!automaticPlay) showMessage(Messages.childrenMustBeMergeSorted);
                 }
                 else {
                     console.log("current group has siblings left");
@@ -433,6 +460,15 @@ function play() {
                     else
                         relation.setCurrentGroupToSort(next_sibling);
                     applicationState = States.GroupToSort;
+                    // Questo controllo e' per mostrare il messaggio giusto
+                    if (!automaticPlay) {
+                        if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                            showMessage(Messages.currentGroupDoesNotFit);
+                        }
+                        else {
+                            showMessage(Messages.currentGroupFitsInBuffer);
+                        }
+                    }
                 }
                 callback();
             }
@@ -485,6 +521,7 @@ function play() {
                     // Scrivi i dati nel buffer
                     buffer.writeOnBuffer(framesToWrite, () => {
                         applicationState = States.ChildrenInBuffer;
+                        if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
                         callback();
                     });
                 });
@@ -498,17 +535,20 @@ function play() {
             buffer.sortAnimation(
                 () => {
                     applicationState = States.OutputFrameFullMerging;
+                    if (!automaticPlay) showMessage(Messages.outputFrameFull);
                     callback();},
                 () => {
                     applicationState = States.OneEmptyFrameInBuffer;
+                    if (!automaticPlay) showMessage(Messages.emptyFrameInBuffer);
                     callback();},
-                merge = true
+                true    // merge
             )
             break;
             
         
-        case States.OneEmptyFrameInBuffer:
-            var frameEmptyIndx = buffer.frameToRefill
+        case States.OneEmptyFrameInBuffer:       
+
+            var frameEmptyIndx = buffer.frameToRefill;
 
             var fr = relation.readOnePageOfChild(frameEmptyIndx);
             if (fr) {
@@ -522,18 +562,34 @@ function play() {
                     relation.shiftFramesByOne(fr);
                     // Scrivi i dati nel buffer
                     buffer.writeOnBufferFrame(fr, frameEmptyIndx, () => {
-                        applicationState = States.ChildrenInBuffer;
+                         // Se l'output è pieno
+                        if (buffer.checkFullOutput()) {
+                            applicationState = States.OutputFrameFullMerging;
+                            if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                        }
+                        else {
+                            applicationState = States.ChildrenInBuffer;
+                            if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
+                        }
                         callback();
                     });
                 });
             }
             else {
-                if (buffer.checkFullOutput()) // L'output è pieno
+                 // L'output è pieno
+                if (buffer.checkFullOutput()) {
                     applicationState = States.OutputFrameFullMerging;
-                else if (buffer.bufferContainsSomething()) // Il buffer non è vuoto
+                    if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                }
+                // Il buffer non è vuoto
+                else if (buffer.bufferContainsSomething()) {
                     applicationState = States.ChildrenInBuffer;
-                else
+                    if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
+                }
+                else {
                     applicationState = States.OutputFrameFullMerging;
+                    if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                }
                 callback();
             }
             break;
@@ -552,10 +608,12 @@ function play() {
                 if (buffer.bufferContainsSomething()) {
                     console.log("buffer still contains something");
                     applicationState = States.ChildrenInBuffer;
+                    if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
                     relation.mergeChildren();
                     applicationState = States.GroupSorted;
+                    if (!automaticPlay) showMessage(Messages.currentGroupSorted);
                 }
                 callback();
             });

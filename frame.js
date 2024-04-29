@@ -146,6 +146,8 @@ class Frame {
         this.rect_content.height = (offset * new_elements.length) - this.linewidth;
         this.rect_content.position.y = offset * (new_elements.length - this.max_elements) / 2;
 
+        this.textStyle.size = this.size / 6.8;
+
         for (var i = 0; i < new_elements.length; i++) {
             var text = this.two.makeText(new_elements[i], this.rect_content.position.x, (i - ((this.max_elements - 1) / 2)) * offset, this.textStyle);
             text.visible = this.view;
@@ -160,7 +162,8 @@ class Frame {
         this.rect_content.height += offset
         this.rect_content.position.y +=  offset / 2
 
-        var text = this.two.makeText(element, 0, (this.elements.length - ((this.max_elements - 1) / 2)) * offset)
+        this.textStyle.size = this.size / 6.8;
+        var text = this.two.makeText(element, 0, (this.elements.length - ((this.max_elements - 1) / 2)) * offset, this.textStyle)
         text.visible = this.view
         this.group.add(text)
 
