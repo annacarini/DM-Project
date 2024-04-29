@@ -23,9 +23,6 @@ const States = {
 
 var applicationState = States.Start;    // Tiene lo stato attuale dell'applicazione
 
-var textBox = null;     // Casella a sx in cui appaiono messaggi
-
-
 // PER GESTIRE L'ANIMAZIONE
 var playOneStepButton = null;
 var playButton = null;
@@ -40,6 +37,9 @@ var playing = false;    // per evitare di chiamare di nuovo play() fino a che la
 // PARAMETRI PER GRAFICA
 
 var two;
+
+var textBox = null;     // Casella a sx in cui appaiono messaggi
+var showingRelationContent = true; 
 
 // Misure dello schermo
 var windowW = window.innerWidth;
@@ -115,6 +115,7 @@ function onBodyLoad() {
 
     // Resetta gli slider
     document.menu_form.reset();
+    document.getElementById("show_relation_content").checked = true;
 
     // Handler slider
     document.getElementById("buffer_size").onchange = function(event) {
@@ -176,6 +177,16 @@ function startSimulation() {
             default: break;
         }
     }
+
+    // Aggiungi handler allo slider che mostra/nasconde i numeri della relazione
+    document.getElementById("show_relation_content").onchange = function() {
+        showingRelationContent = !showingRelationContent;
+        if (relation == null) return;
+        else {
+            relation.showContent(showingRelationContent);
+        }
+    };
+
 
 
     var leftColumn = new Section(document.getElementById("column_sx"));

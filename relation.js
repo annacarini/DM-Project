@@ -17,7 +17,7 @@ class Relation {
 
     // PARAMETRI PER GRAFICA
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
-    frameColor = "#6fdcff";
+    frameColor = "#9deffc"; //"#6fdcff";
     highlighterColor = "#2546cc";
     highlighterThickness = VERY_THICK_LINE;
 
@@ -52,7 +52,7 @@ class Relation {
             // Crea il frame        constructor(x, y, size, color, max_elements, two)
             var newFrame = new Frame(framePositionX, framePositionY, this.frameSize, this.frameColor, MAX_ELEMENTS_PER_FRAME, two);
             newFrame.fill(vals);    // Scrivi i valori nel frame
-            //newFrame.setView(0);    // Fai in modo che i valori non si vedono
+            //newFrame.setView(false);    // Fai in modo che i valori non si vedono
 
             // Aggiungi il frame all'albero e alla lista
             this.relation.value.push(newFrame);
@@ -209,6 +209,12 @@ class Relation {
     }
 
 
+    showContent(show) {
+        for (var i = 0; i < this.relationArray.length; i++) {
+            this.relationArray[i].setView(show);
+        }
+    }
+
 
 
 
@@ -262,7 +268,7 @@ class Relation {
             this.changeGroupColor(this.currentGroup.children[i], this.stringifyColor(color));
             // assicurati che il nuovo colore non sia troppo simile a quello precedente
             var newColor = this.randomColor();
-            while (this.differenceBetweenColors(newColor, color) < 60 ) {
+            while (this.differenceBetweenColors(newColor, color) < 70 ) {
                 newColor = this.randomColor();
             }
             //console.log("difference: " + this.differenceBetweenColors(newColor, color));
@@ -342,7 +348,7 @@ class Relation {
         //return Math.abs(color1[0] - color2[0]);     // consideriamo solo la HUE
 
         // Dai piu' importanza alla hue, ma considera anche la luminosita'
-        return Math.abs(color1[0] - color2[0]) + 0.1 * Math.abs(color1[2] - color2[2]);
+        return Math.abs(color1[0] - color2[0]) + 0.08 * Math.abs(color1[2] - color2[2]);
     }
 
 
