@@ -18,7 +18,7 @@ class Relation {
 
     // PARAMETRI PER GRAFICA
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
-    frameColor = "#9deffc" //"#6fdcff";
+    frameColor = "hsl(188, 94%, 80%)";
     highlightersSortColor = "black";
     highlightersSortMargin = 2;
     highlightersColor = "black";
@@ -290,13 +290,13 @@ class Relation {
         console.log(this.currentGroup);
 
         // Cambia il colore a tutti i gruppi tranne l'ultimo
-        var color = this.randomColor();
+        var color = Relation.randomColor();
         for (var i = 0; i < this.currentGroup.children.length - 1; i++) {
-            this.changeGroupColor(this.currentGroup.children[i], this.stringifyColor(color));
+            this.changeGroupColor(this.currentGroup.children[i], Relation.stringifyColor(color));
             // assicurati che il nuovo colore non sia troppo simile a quello precedente
-            var newColor = this.randomColor();
-            while (this.differenceBetweenColors(newColor, color) < 70 ) {
-                newColor = this.randomColor();
+            var newColor = Relation.randomColor();
+            while (Relation.differenceBetweenColors(newColor, color) < 70 ) {
+                newColor = Relation.randomColor();
             }
             //console.log("difference: " + this.differenceBetweenColors(newColor, color));
             color = newColor;
@@ -374,7 +374,7 @@ class Relation {
     }
 
 
-    differenceBetweenColors(color1, color2) {
+    static differenceBetweenColors(color1, color2) {
         //return Math.abs(color1[0] - color2[0]) + Math.abs(color1[1] - color2[1]) + Math.abs(color1[2] - color2[2]);
         //return Math.max(Math.abs(color1[0] - color2[0]), Math.abs(color1[1] - color2[1]), Math.abs(color1[2] - color2[2]));
         //return Math.abs(color1[0] - color2[0]);     // consideriamo solo la HUE
@@ -384,21 +384,28 @@ class Relation {
     }
 
 
-    randomColor() {
+    static randomColor() {
         var h = Math.round(360 * Math.random());
         var s = Math.round(60 + 45 * Math.random());
         var l = Math.round(65 + 10 * Math.random());
         return [h, s, l];
     }
 
+    static getDarkerColor(color) {
+        // prende un colore espresso come HSL, tipo: "hsl(105, 73%, 62%)" e ne diminuisce il terzo valore, ovvero la luminosita'
+        var colorArray = Relation.hslToArray(color);
+        colorArray[1] = Math.max(0, colorArray[1]-20);  // assicuriamoci che non diventi minore di zero
+        colorArray[2] = Math.max(0, colorArray[2]-16);  // assicuriamoci che non diventi minore di zero
+        return Relation.stringifyColor(colorArray);
+    }
 
-    stringifyColor(col) {
+    static stringifyColor(col) {
         return "hsl(" + col[0] + ',' + col[1] + '%,' + col[2] + '%)';
     }
 
 
     // Converte un colore nel formato stringa hsl in un array di 3 elementi
-    hslToArray(color) {
+    static hslToArray(color) {
         var match = color.match(/(\d+(\.\d+)?)/g)
         const h = parseFloat(match[0]);
         const s = parseFloat(match[1]);
@@ -407,9 +414,8 @@ class Relation {
         return [h, s, l]
     }
 
-
     // Converte un colore esadecimale in un una stringa hsl
-    hexToHSL(hex) {
+    static hexToHSL(hex) {
         // Rimuovi l'eventuale # all'inizio della stringa
         hex = hex.replace('#', '');
         
@@ -497,24 +503,24 @@ class Relation {
         var colors = this._retrieveColors(this.relation);
         for (var j = 0; j < colors.length; j++) {
             if (colors[j][0] == '#')
-                colors[j] = this.hexToHSL(colors[j])
-            colors[j] = this.hslToArray(colors[j])
+                colors[j] = Relation.hexToHSL(colors[j])
+            colors[j] = Relation.hslToArray(colors[j])
         }
         var i = 0;
-        var newColor = this.randomColor();
+        var newColor = Relation.randomColor();
         while (i < 10) {
             var differents = 0;
             console.log("Stiamo dentro il ciclo while!", i)
             for (var color of colors) {
-                if (this.differenceBetweenColors(color, newColor) > 60)
+                if (Relation.differenceBetweenColors(color, newColor) > 60)
                     differents += 1
             }
             if (differents == colors.length) // Se è diverso da tutti i colori esco
-                return this.stringifyColor(newColor);
+                return Relation.stringifyColor(newColor);
             i++;
-            newColor = this.randomColor();
+            newColor = Relation.randomColor();
         }
-        return this.stringifyColor(newColor)
+        return Relation.stringifyColor(newColor)
     }
 
 

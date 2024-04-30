@@ -21,7 +21,7 @@ class Frame {
         this.textStyle.size = this.size / 6.8;
 
         this.sorted = false;
-        this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.2)', this.size / 5, this.size / 5)
+        this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.2)', this.size / 40, this.size / 12)
         this.view = 1 // 0 relation, 1 buffer
 
         this.rect = two.makeRectangle(0, 0, this.size, this.size);
@@ -102,7 +102,8 @@ class Frame {
     setColor(color) {
         //cambiare colore
         this.color = color;                 // serve per far funzionare la funzione "mergeSiblings" di relation
-        this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.1)', this.size / 10, this.size / 5)
+        //this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.1)', this.size / 40, this.size / 12)
+        this.texture = createCustomTexture(this.size, this.size, this.color, Relation.getDarkerColor(this.color), this.size / 40, this.size / 12)
         this.rect_content.opacity = 1;
         if (this.sorted && this.texture.loaded)
             this.rect_content.fill = this.texture
