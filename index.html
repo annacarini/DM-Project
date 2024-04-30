@@ -13,16 +13,19 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body onload="onBodyLoad()">
-        <div id="menu">
+        <div id="menu" style="position: fixed; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
             <form name="menu_form">
                 Number of frames in the buffer:<br/>
                 <input type="range" id="buffer_size" min="3" max="10" value="3"/><span id="buffer_size_value">3</span><br/>
                 Number of pages of the relation:<br/>
                 <input type="range" id="relation_size" min="1" max="100" value="9"/><span id="relation_size_value">9</span><br/>
+                <input type="button" id="resume" value="Resume" onclick="closeMenu();" hidden/>
                 <input type="button" id="start_simulation" value="Start" onclick="startSimulation();"/>
             </form>
         </div>
-        <div id="simulation" style="width:100%; height:100%;" hidden>
+        <!-- BOTTONE RESTART -->
+        <button id="restart_button" style="position: absolute; top: 10px; right: 10px;" onclick="openMenu();" hidden>Restart</button>
+        <div id="simulation" style="width:100%; height:100%;">
             <!-- COLONNA A SX-->
             <div id="column_sx" style="width:20%; height:100%; /*background-color: rgb(188, 223, 174);*/ position:fixed;
             box-shadow: 3px 0px 3px rgba(0, 0, 0, 0.5);">
@@ -39,8 +42,21 @@
                         Waiting to start.
                     </span>
                 </div>
+                <!-- CASELLA DI TESTO per mostrare il numero di letture I/O -->
+                <div style="position:relative; top:20vh; width: 65%; height:fit-content; min-height:5%; left:50%; transform:translate(-50%);
+                font-family:Calibri;">
+                    <div style="font-size:1.4; text-align:center; font-weight:bold;">N. I/O</div>
+                    <div style="display: flex;">
+                        <div style="flex: 1;">Read</div>
+                        <div id="read-count" style="flex: 1; text-align: right;">0</div>
+                    </div>
+                    <div style="display: flex;">
+                        <div style="flex: 1;">Write</div>
+                        <div id="write-count" style="flex: 1;text-align: right;">0</div>
+                    </div>
+                </div>
                 <!-- SWITCH per attivare e disattivare i numeri nella relazione -->
-                <div title="" style="position:relative; top:20vh; width:100%; left:50%; transform:translate(-50%); text-align:center;">
+                <div title="" style="position:relative; top:25vh; width:100%; left:50%; transform:translate(-50%); text-align:center;">
                     <span style="display:inline-block; padding-right:8px; font-family:Calibri; font-size:1.2vw; transform:translateY(4%);">
                         Show content of relation pages
                     </span>
@@ -55,10 +71,11 @@
                     <input type="button" id="step_button" value="Play one step" onclick="playOne();" style=""/>
                     <input type="button" id="play_button" value="Play" onclick="playAll();" style=""/>
                     <input type="button" id="pause_button" value="Pause" onclick="pause();" style=""/>
+                    <input type="button" id="jump_button" value="Jump" onclick="playOne(0);" style=""/>
                 </div>
             </div>
             <!-- COLONNA CENTRALE -->
-            <div id="column_center" style="position:fixed; z-index:-1; top:0; left:20%; width:80%; height:100%;">
+            <div id="column_center" style="position:fixed; z-index:-1; top:0; left:20%; width:80%; height:100%;" hidden>                
                 <!-- PARTE SOPRA (buffer)-->
                 <div id="column_center_upper_part" style="width:100%; height:36%; /*background-color: rgb(235, 139, 139);*/
                 border-bottom: 3px dashed rgba(0, 0, 0, 0.7);">

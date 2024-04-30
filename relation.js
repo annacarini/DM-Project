@@ -19,10 +19,10 @@ class Relation {
     // PARAMETRI PER GRAFICA
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
     frameColor = "#9deffc" //"#6fdcff";
-    highlightersSortColor = "#00149a";
+    highlightersSortColor = "black";
     highlightersSortMargin = 2;
-    highlightersColor = "#2546cc";
-    highlightersMargin = 8;
+    highlightersColor = "black";
+    highlightersMargin = 6;
     highlighterThickness = VERY_THICK_LINE;
 
     // Valore random massimo per la relazione
@@ -32,6 +32,7 @@ class Relation {
     constructor(two, relationSize, x, y, width, height, preferredFrameSize, minimumFrameSize) {
 
         this.two = two;
+        this.group = new Two.Group();
         this.frameSize = this.findOptimalSize(width, height, relationSize, preferredFrameSize, minimumFrameSize);
 
         // Calcola quanti frame disegnare in ogni riga "piena"
@@ -55,6 +56,7 @@ class Relation {
             // Crea il frame        constructor(x, y, size, color, max_elements, two)
             var newFrame = new Frame(framePositionX, framePositionY, this.frameSize, this.frameColor, MAX_ELEMENTS_PER_FRAME, two);
             newFrame.fill(vals);    // Scrivi i valori nel frame
+            this.group.add(newFrame.group);
             //newFrame.setView(false);    // Fai in modo che i valori non si vedono
 
             // Aggiungi il frame all'albero e alla lista
@@ -74,6 +76,8 @@ class Relation {
                 framePositionX += this.frameSize + this.spaceBetweenFrames;
             }
         }
+
+        this.two.add(this.group)
 
         // Poni il nodo attuale uguale a tutta la relazione
         this.currentGroup = this.relation;
@@ -114,6 +118,12 @@ class Relation {
         this.currentGroup = group
 
         this.highlightGroup(this.currentGroup, "highlightersSort");
+
+        for (var i = 0; i < this.highlighters.length; i++) {
+            console.log(this.highlighters[i])
+            this.highlighters[i].stroke = "#c0c0c0"
+        }
+
     }
 
 
@@ -158,6 +168,7 @@ class Relation {
 
     // Disegna rettangoli intorno ai frame (CONSECUTIVI!) contenuti nel campo values del nodo "groupNode". Salva i rettangoli dentro "highlighters"
     highlightGroup(groupNode, nameHighl, callback=null) {
+
         // elimina gli highlighter gia' esistenti
         var highlighters = this[nameHighl]
         for (var i = highlighters.length - 1; i >= 0; i--) {
@@ -189,6 +200,9 @@ class Relation {
             if (i == group.length - 1) {
                 highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, currentFrame, this[nameHighl + "Color"], this[nameHighl + "Margin"]));
             }
+
+            // Aggiungiamo l'highlighter appena creato al gruppo della relation
+            this.group.add(highlighters[highlighters.length - 1]);
 
             // metti questo come last frame of row       
             lastFrameOfRow = currentFrame;
@@ -631,7 +645,7 @@ class Relation {
     }
 
 
-    writeWithAnimation(frame, newColor, callback=null) {
+    writeWithAnimation(frame, newColor, time = 1000, callback=null) {
         var res = false;
         for (let i = 0; i < this.availableFrames.length; i++) {
             if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
@@ -645,8 +659,7 @@ class Relation {
                 var end_x = this.availableFrames[i].x;
                 var end_y = this.availableFrames[i].y;
                 var end_size = this.availableFrames[i].size;
-                var animationLength = 1000;
-                animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, animationLength, () => {
+                animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, time, () => {
                     // scrivi gli elementi
                     this.availableFrames[i].fill(frame.elements);
                     // cambia il colore (serve farlo a prescindere per reimpostare l'opacita' ad 1)

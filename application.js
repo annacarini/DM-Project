@@ -27,19 +27,22 @@ var applicationState = States.Start;    // Tiene lo stato attuale dell'applicazi
 var playOneStepButton = null;
 var playButton = null;
 var pauseButton = null;
+var playJumpButton = null;
 
 var automaticPlay = true;
 var paused = true;
 var playing = false;    // per evitare di chiamare di nuovo play() fino a che la callback non e' stata chiamata
 
 
-
 // PARAMETRI PER GRAFICA
-
 var two;
 
 var textBox = null;     // Casella a sx in cui appaiono messaggi
 var showingRelationContent = true; 
+
+// Ogetti di TWO
+var bufferFramesText = null
+var relationFramesText = null
 
 // Misure dello schermo
 var windowW = window.innerWidth;
@@ -60,6 +63,10 @@ const SPACE_BETWEEN_FRAMES = windowW/200;
 const fontSizeBig = windowW/60;
 const fontSizeMedium = windowW/80;
 const fontSizeSmall = windowW/100;
+
+// Valori I/O
+var nRead = 0
+var nWrite = 0
 
 // Stili testo
 const fontStyleMediumBlack = {
@@ -91,8 +98,14 @@ const fontStyleSmallBlackCentered = {
     fill: "rgb(0,0,0)"
 }
 
+
 // Per gestire il cambio dei colori nella relation al merge
 var newColor
+
+
+// Lunghezza animazioni
+var animTime = 1000
+
 
 // Crea la una texture con delle righe
 function createCustomTexture(width, height, backgroundColor, barColor, barWidth, barGap) {
@@ -155,7 +168,18 @@ function onBodyLoad() {
     playOneStepButton = document.getElementById("step_button"); 
     playButton = document.getElementById("play_button");
     pauseButton = document.getElementById("pause_button");
+    playJumpButton = document.getElementById("jump_button");
     pauseButton.disabled = true;    // parte disattivato
+}
+
+
+function openMenu() {
+    document.getElementById("menu").removeAttribute("hidden");
+}
+
+
+function closeMenu() {
+    document.getElementById("menu").setAttribute("hidden", null);
 }
 
 
@@ -164,14 +188,17 @@ function startSimulation() {
     // Nascondi il div del menu
     document.getElementById("menu").setAttribute("hidden", null);
 
+    // Rendo visibile il bottone resume del menu. Cambio il messaggio del bottone start e la sua funzione onclick
+    document.getElementById("resume").removeAttribute("hidden");
+    document.getElementById("start_simulation").setAttribute("value", "Restart");
+    document.getElementById("start_simulation").onclick = () => {reset(); closeMenu()};
+
     // Mostra il div simulation
-    var simulation = document.getElementById("simulation");
-    simulation.removeAttribute("hidden");
+    //var simulation = document.getElementById("simulation");
+    document.getElementById("column_center").removeAttribute("hidden");
+    document.getElementById("restart_button").removeAttribute("hidden");
 
-
-    
     // Aggiungi controlli da tastiera (va fatto ora se no uno poteva premere la barra spaziatrice prima di avviare la simulazione)
-    
     document.onkeydown = function(e) {
         switch (e.key) {
             /*
@@ -210,13 +237,10 @@ function startSimulation() {
         }
     };
 
-
-
     var leftColumn = new Section(document.getElementById("column_sx"));
     var centerColumn = new Section(document.getElementById("column_center"));
     var upperPart = new Section(document.getElementById("column_center_upper_part"));
     var lowerPart = new Section(document.getElementById("column_center_lower_part"));
-    
     
     // Avvia Two
     two = new Two({
@@ -242,30 +266,53 @@ function startSimulation() {
     // Sfondo
     //two.renderer.domElement.style.background = '#fcb215';
 
-
     // Scritta "Buffer"   makeText(message, x, y, style)
     two.makeText("BUFFER", upperPart.bottomLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.25*upperPart.height, fontStyleMediumBlack); 
     // Scritta con la dimensione del buffer
-    two.makeText("M = " + bufferSize, upperPart.topLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.15*upperPart.height, fontStyleMediumGray); 
+    bufferFramesText = two.makeText("M = " + bufferSize, upperPart.topLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.15*upperPart.height, fontStyleMediumGray); 
     
     // Scritta "Relation"
     two.makeText("RELATION", lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.15*upperPart.height, fontStyleMediumBlack); 
     // Scritta con la dimensione della relazione
-    two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
+    relationFramesText = two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
     
-
     // CREA BUFFER         constructor(x, y, length, frameSize, two)
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
 
     // CREA RELAZIONE
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
 
-
-
     // updates the drawing area and actually renders the content
     two.update();
 }
 
+
+function reset() {
+    console.log("Resettiamo!")
+    textBox.innerHTML = "";
+    nRead = 0;
+    nWrite = 0;
+    document.getElementById('read-count').textContent = 0;
+    document.getElementById('write-count').textContent = 0;
+    automaticPlay = true;
+    paused = true;
+    playing = false;
+    playOneStepButton.disabled = false;
+    playButton.disabled = false;
+    pauseButton.disabled = true;
+    playJumpButton.disabled = false;
+    applicationState = States.Start; 
+
+    var upperPart = new Section(document.getElementById("column_center_upper_part"));
+    var lowerPart = new Section(document.getElementById("column_center_lower_part"));
+    buffer.group.remove();
+    relation.group.remove();    
+    buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
+    relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
+    bufferFramesText.value = 'M = ' + bufferSize;
+    relationFramesText.value = 'B(R) = ' + relationSize;
+    two.update();
+}
 
 
 function showMessage(text) {
@@ -274,7 +321,7 @@ function showMessage(text) {
 
 
 
-function playOne() {
+function playOne(time = animTime) {
     // esci dalla pausa
     paused = false;
 
@@ -284,7 +331,7 @@ function playOne() {
     // disattiva pulsante pausa
     pauseButton.disabled = true;
 
-    play();
+    play(time);
 }
 
 function playAll() {
@@ -296,6 +343,7 @@ function playAll() {
 
     // disattiva pulsante step
     playOneStepButton.disabled = true;
+    playJumpButton.disabled = true
 
     // attiva pulsante pausa
     pauseButton.disabled = false;
@@ -303,7 +351,7 @@ function playAll() {
     // leva i messaggi
     showMessage("");
 
-    play();
+    play(animTime);
 }
 
 function pause() {
@@ -312,6 +360,7 @@ function pause() {
 
     // attiva pulsante play one
     playOneStepButton.disabled = false;
+    playJumpButton.disabled = false
 
     // attiva pulsante play
     playButton.disabled = false;
@@ -322,17 +371,14 @@ function pause() {
 
 
 
-
 // FUNZIONE PLAY
-function play() {
+function play(time = animTime) {
     if (relation == null || buffer == null || playButton == null) return;
-
 
     // Se stava gia' riproducendo qualcosa non fare nulla
     if (playing) return;
 
     playing = true;
-
 
     switch (applicationState) {
         
@@ -382,7 +428,7 @@ function play() {
                 var start_size = [];
                 var end_size = [];
                 var color = [];
-                var animationLength = 1000;
+                var animationLength = time;
                 for (var i = 0; i < frames.length; i++) {
                     start_x.push(frames[i].x);
                     start_y.push(frames[i].y);
@@ -396,6 +442,10 @@ function play() {
                 animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
                     // Quando terminano le animazioni, scrivi i dati nel buffer
                     buffer.writeOnBuffer(frames, () => {
+                        // Aggiorno il numero di read
+                        nRead += frames.length
+                        document.getElementById('read-count').textContent = nRead;
+
                         applicationState = States.GroupInBuffer;
                         if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
                         callback();
@@ -406,7 +456,7 @@ function play() {
 
         case States.GroupInBuffer:
             // Avvia il sort
-            buffer.sortAnimation(() => {
+            buffer.sortAnimation(time / 5, () => {
                 applicationState = States.OutputFrameFullSorting;
                 if (!automaticPlay) showMessage(Messages.outputFrameFull);
                 callback();
@@ -416,8 +466,13 @@ function play() {
         case States.OutputFrameFullSorting:
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
+
             // Copia l'output frame nella relazione
-            relation.writeWithAnimation(frame, false, () => {
+            relation.writeWithAnimation(frame, false, time, () => {
+                // Aggiorno il valore del numero di write
+                nWrite += 1
+                document.getElementById('write-count').textContent = nWrite;
+
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
                     //console.log("buffer still contains something");
@@ -439,7 +494,7 @@ function play() {
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
                 applicationState = States.Finish;
-                relation.highlightGroup(null);      // de-evidenzia la relazione
+                relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
                 showMessage(Messages.finished);
                 callback();
             }
@@ -490,7 +545,7 @@ function play() {
                 start_size = [];
                 end_size = [];
                 color = [];
-                var animationLength = 1000;
+                var animationLength = time;
 
                 // Genero un nuovo colore che verrà utilizzato quando i frames verranno scritti nella relazioni
                 newColor = relation.generateNewColor()
@@ -520,6 +575,10 @@ function play() {
                     
                     // Scrivi i dati nel buffer
                     buffer.writeOnBuffer(framesToWrite, () => {
+                        // Aggiorno il numero di read
+                        nRead += framesToWrite.length
+                        document.getElementById('read-count').textContent = nRead;
+
                         applicationState = States.ChildrenInBuffer;
                         if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
                         callback();
@@ -533,6 +592,7 @@ function play() {
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
             // se invece c'è un frame che è stato svuotato allora va riempito (caso 2)
             buffer.sortAnimation(
+                time / 5,
                 () => {
                     applicationState = States.OutputFrameFullMerging;
                     if (!automaticPlay) showMessage(Messages.outputFrameFull);
@@ -557,12 +617,16 @@ function play() {
                 end_x = endPos[0];
                 end_y = endPos[1];
 
-                animateOneSquare(fr.x, fr.y, end_x, end_y, fr.size, frameSize, fr.color, 1000, () => {
+                animateOneSquare(fr.x, fr.y, end_x, end_y, fr.size, frameSize, fr.color, time, () => {
                     // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
                     relation.shiftFramesByOne(fr);
                     // Scrivi i dati nel buffer
                     buffer.writeOnBufferFrame(fr, frameEmptyIndx, () => {
-                         // Se l'output è pieno
+                        // Aggiorno il valore del numero di read
+                        nRead += 1
+                        document.getElementById('read-count').textContent = nRead;
+
+                        // Se l'output è pieno
                         if (buffer.checkFullOutput()) {
                             applicationState = States.OutputFrameFullMerging;
                             if (!automaticPlay) showMessage(Messages.outputFrameFull);
@@ -598,12 +662,17 @@ function play() {
         case States.OutputFrameFullMerging:
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
+
             // Imposta il suo colore pari al colore dell'ultimo figlio
             //frame.color = relation.getColorOfLastChild();
             frame.color = newColor
-            console.log("IL NUOVO COLORE:", newColor)
+
             // Copia l'output frame nella relazione
-            relation.writeWithAnimation(frame, frame.color, () => {
+            relation.writeWithAnimation(frame, frame.color, time, () => {
+                // Aggiorno il valore del numero di write
+                nWrite += 1
+                document.getElementById('write-count').textContent = nWrite;
+
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
                     console.log("buffer still contains something");
@@ -636,13 +705,14 @@ async function callback() {
         }
         else {
             await new Promise(r => setTimeout(r, 500));
-            play();
+            play(animTime);
         }
     }
     // per assicurarsi che i pulsanti non si sono incasinati nel frattempo?
     else {
         playButton.disabled = false;
         playOneStepButton.disabled = false;
+        playJumpButton.disabled = false;
         pauseButton.disabled = true;
     }
 }
