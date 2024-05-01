@@ -258,12 +258,10 @@ class Buffer {
 
 
     sortAnimation(time = 200, sortCallback = () => {}, mergeCallback = () => {}, merge = false) {
-        this.sort(merge)
-        console.log("Prima del tween quando merge", merge)
+        this.sort(merge);
         var tween = new TWEEN.Tween(null).to(null, time).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
                 this.frameToRefill = this.checkToRefill();
-                console.log("Il frame da refillare: ", this.frameToRefill, " refilled: ", this.frameRefilled[this.frameToRefill])
                 if (merge && (this.frameToRefill != -1)) {
                     this.frameRefilled[this.frameToRefill] = false;
                     mergeCallback();
@@ -272,7 +270,9 @@ class Buffer {
                     sortCallback();
             }
         )
-        tween.start()
+        tween.start();
+
+        return tween;
     }
 
 
@@ -324,5 +324,28 @@ class Buffer {
             }
         }
         return res;
+    }
+
+    /****************** UNDO *****************/
+    undoWriteOnBuffer() {
+        for (var i = 0; i < this.frames.length; i++) {
+            this.frames[i].resetFrame();
+            this.frameRefilled[i] = false;
+        }
+    }
+
+    undoSortAnimation(oldFramesValues) {
+        this.outputFrame.resetFrame();
+
+        for (var i = 0; i < oldFramesValues.length; i++) {
+            this.frames[i].resetFrame();
+            this.frames[i].fill(oldFramesValues[i]);
+        }
+    }
+
+    undoFlushOutputFrame(oldValues) {
+        console.log("OLD VALUES", oldValues);
+        this.outputFrame.resetFrame();
+        this.outputFrame.fill(oldValues);
     }
 }

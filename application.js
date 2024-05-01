@@ -68,6 +68,9 @@ const fontSizeSmall = windowW/100;
 var nRead = 0
 var nWrite = 0
 
+// Rollback
+var rollback = []
+
 // Stili testo
 const fontStyleMediumBlack = {
     alignment: "left",
@@ -103,7 +106,8 @@ const fontStyleSmallBlackCentered = {
 var newColor
 
 
-// Lunghezza animazioni
+// Animazioni
+var tween = null
 var animTime = 1000
 
 
@@ -175,6 +179,7 @@ function onBodyLoad() {
 
 function openMenu() {
     document.getElementById("menu").removeAttribute("hidden");
+    pause();
 }
 
 
@@ -355,6 +360,7 @@ function playAll() {
 }
 
 function pause() {
+
     // disattiva pulsante pausa
     pauseButton.disabled = true;
 
@@ -367,8 +373,21 @@ function pause() {
 
     // metti in pausa
     paused = true;
+
+    //endTween(tween);
 }
 
+
+function undo() {
+    //endTween(tween);
+    if (rollback.length) {
+        var lastAction = rollback[rollback.length -  1];
+        lastAction[0]();
+        applicationState = lastAction[1];
+        showMessage(lastAction[2]);
+        rollback.pop();
+    }
+}
 
 
 // FUNZIONE PLAY
@@ -393,17 +412,23 @@ function play(time = animTime) {
                 }
             }
 
+            rollback.push([() => relation.undoHighlightGroup("highlighters"), States.Start, "Waiting to start"]);
+
             relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
                 applicationState = States.GroupToSort;
                 callback();
             });
+
             break;
 
         case States.GroupToSort:
             var currentGroup = relation.getCurrentGroup();
+
             // Se il gruppo non entra nel buffer, splittalo e rimani in questo stato
             if (currentGroup.value.length > bufferSize - 1) {
+                var oldColor = currentGroup.value[0].color
                 relation.splitGroup(bufferSize - 1);
+                rollback.push([() => relation.undoSplitGroup(oldColor), States.GroupToSort, textBox.innerHTML])
 
                 // Questo controllo e' per mostrare il messaggio giusto
                 if (!automaticPlay) {
@@ -439,24 +464,37 @@ function play(time = animTime) {
                     end_size.push(frameSize);
                     color.push(frames[i].color);
                 }
-                animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
-                    // Quando terminano le animazioni, scrivi i dati nel buffer
-                    buffer.writeOnBuffer(frames, () => {
-                        // Aggiorno il numero di read
-                        nRead += frames.length
-                        document.getElementById('read-count').textContent = nRead;
 
-                        applicationState = States.GroupInBuffer;
-                        if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
-                        callback();
-                    });
+                rollback.push([() => {
+                    relation.undoReadCurrentGroup(frames);
+                    buffer.undoWriteOnBuffer();
+                    nRead -= frames.length;
+                    document.getElementById('read-count').textContent = nRead;
+                },
+                States.GroupToSort, textBox.innerHTML]);
+
+                tween = animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
+                    // Quando terminano le animazioni, scrivi i dati nel buffer
+                    buffer.writeOnBuffer(frames);
+                    // Aggiorno il numero di read
+                    nRead += frames.length;
+                    document.getElementById('read-count').textContent = nRead;
+
+                    applicationState = States.GroupInBuffer;
+                    if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
+                    callback();
                 });
             }
             break;
 
         case States.GroupInBuffer:
+            var oldFramesValues = [];
+            for (frame of buffer.frames)
+                oldFramesValues.push(frame.getValues());
+            rollback.push([() => buffer.undoSortAnimation(oldFramesValues), States.GroupInBuffer, textBox.innerHTML]);
+
             // Avvia il sort
-            buffer.sortAnimation(time / 5, () => {
+            tween = buffer.sortAnimation(time / 5, () => {
                 applicationState = States.OutputFrameFullSorting;
                 if (!automaticPlay) showMessage(Messages.outputFrameFull);
                 callback();
@@ -464,11 +502,19 @@ function play(time = animTime) {
             break;
     
         case States.OutputFrameFullSorting:
+            const oldValues = buffer.outputFrame.getValues();
+            rollback.push([() => {
+                buffer.undoFlushOutputFrame(oldValues);
+                relation.undoWriteWithAnimation();
+                nWrite -= 1;
+                document.getElementById('write-count').textContent = nWrite;
+            }, States.OutputFrameFullSorting, textBox.innerHTML]);
+            
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
 
             // Copia l'output frame nella relazione
-            relation.writeWithAnimation(frame, false, time, () => {
+            tween = relation.writeWithAnimation(frame, false, time, () => {
                 // Aggiorno il valore del numero di write
                 nWrite += 1
                 document.getElementById('write-count').textContent = nWrite;
@@ -486,6 +532,7 @@ function play(time = animTime) {
                 }
                 callback();
             });
+
             break;
 
         
@@ -493,6 +540,7 @@ function play(time = animTime) {
             // Controlla se questo gruppo e' la radice (significa che hai finito tutto)
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
+                rollback.push([() => relation.undoHighlightGroup("highlighters"), States.GroupSorted, textBox.innerHTML]);
                 applicationState = States.Finish;
                 relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
                 showMessage(Messages.finished);
@@ -500,20 +548,26 @@ function play(time = animTime) {
             }
             // Altrimenti vedi se ha un fratello
             else {
+                const oldGroup = relation.currentGroup
                 var next_sibling = relation.getNextSibling();
                 // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
                 if (next_sibling == null) {
                     console.log("current group has no siblings left");
+                    rollback.push([() => relation.undoSetCurrentGroup(oldGroup, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
                     relation.setCurrentGroup(currentGroup.parent);
                     applicationState = States.GroupToMerge;
                     if (!automaticPlay) showMessage(Messages.childrenMustBeMergeSorted);
                 }
                 else {
                     console.log("current group has siblings left");
-                    if (currentGroup.value.length > buffer.length - 1)
+                    if (currentGroup.value.length > buffer.length - 1) {
+                        rollback.push([() => relation.undoSetCurrentGroup(oldGroup, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
                         relation.setCurrentGroup(next_sibling);
-                    else
+                    }
+                    else {
+                        rollback.push([() => relation.undoSetCurrentGroupToSort(oldGroup), States.GroupSorted, textBox.innerHTML]);
                         relation.setCurrentGroupToSort(next_sibling);
+                    }
                     applicationState = States.GroupToSort;
                     // Questo controllo e' per mostrare il messaggio giusto
                     if (!automaticPlay) {
@@ -531,67 +585,96 @@ function play(time = animTime) {
         
         case States.GroupToMerge:
             var currentGroup = relation.getCurrentGroup();
-            
-                // Prendi tutti i siblings
-                var siblings = currentGroup.children;
-        
-                var framesToWrite = [];
 
-                // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
-                start_x = [];
-                start_y = [];
-                end_x = [];
-                end_y = [];
-                start_size = [];
-                end_size = [];
-                color = [];
-                var animationLength = time;
-
-                // Genero un nuovo colore che verrà utilizzato quando i frames verranno scritti nella relazioni
-                newColor = relation.generateNewColor()
-
-                // Carica una pagina di ogni child dentro framesToWrite
-                for (let i = 0; i < siblings.length; i++) {
-                    var fr = relation.readOnePageOfChild(i);
-                    framesToWrite.push(fr);
-                    start_x.push(fr.x);
-                    start_y.push(fr.y);
-                    let endPos = buffer.getPositionOfFrame(i);
-                    end_x.push(endPos[0]);
-                    end_y.push(endPos[1]);
-                    start_size.push(fr.size);
-                    end_size.push(frameSize);
-                    color.push(fr.color);
+            const oldFrameValues = [];
+            const oldColors = [];
+            const oldPositions = [];
+            for (var j = 0; j < currentGroup.children.length; j++) {
+                var frames = [];
+                var colors = [];
+                var positions = [];
+                for (var i = 0; i < currentGroup.children[j].value.length; i++) {
+                    frames.push(currentGroup.children[j].value[i].getValues());
+                    colors.push(currentGroup.children[j].value[i].color);
+                    positions.push([currentGroup.children[j].value[i].x, currentGroup.children[j].value[i].y]);
                 }
+                oldFrameValues.push(frames);
+                oldColors.push(colors);
+                oldPositions.push(positions);
+            }
 
-                // Crea animazione
-                animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
-                    // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
-                    
-                    for (let i = 0; i < framesToWrite.length; i++) {
-                        console.log("sto shiftando");
-                        relation.shiftFramesByOne(framesToWrite[i]);
-                    }
-                    
-                    // Scrivi i dati nel buffer
-                    buffer.writeOnBuffer(framesToWrite, () => {
-                        // Aggiorno il numero di read
-                        nRead += framesToWrite.length
-                        document.getElementById('read-count').textContent = nRead;
+            // Prendi tutti i siblings
+            var siblings = currentGroup.children;
+        
+            var framesToWrite = [];
 
-                        applicationState = States.ChildrenInBuffer;
-                        if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
-                        callback();
-                    });
-                });
+            // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
+            start_x = [];
+            start_y = [];
+            end_x = [];
+            end_y = [];
+            start_size = [];
+            end_size = [];
+            color = [];
+            var animationLength = time;
+
+            // Genero un nuovo colore che verrà utilizzato quando i frames verranno scritti nella relazioni
+            newColor = relation.generateNewColor()
+
+            // Carica una pagina di ogni child dentro framesToWrite
+            for (let i = 0; i < siblings.length; i++) {
+                var fr = relation.readOnePageOfChild(i);
+                framesToWrite.push(fr);
+                start_x.push(fr.x);
+                start_y.push(fr.y);
+                let endPos = buffer.getPositionOfFrame(i);
+                end_x.push(endPos[0]);
+                end_y.push(endPos[1]);
+                start_size.push(fr.size);
+                end_size.push(frameSize);
+                color.push(fr.color);
+            }
+
+            rollback.push([() => {
+                buffer.undoWriteOnBuffer();
+                relation.undoAnimateMultipleSquares(oldFrameValues, oldColors, oldPositions);
+                for (var i = 0; i < framesToWrite.length; i++)
+                    relation.undoReadOnePageOfChild();
+                nRead -= framesToWrite.length;
+                document.getElementById('read-count').textContent = nRead;
+            }, States.GroupToMerge, textBox.innerHTML]);
+
+            // Crea animazione
+            tween = animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
+                // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
+                    
+                for (let i = 0; i < framesToWrite.length; i++) {
+                    console.log("sto shiftando");
+                    relation.shiftFramesByOne(framesToWrite[i]);
+                }
+                    
+                // Scrivi i dati nel buffer
+                buffer.writeOnBuffer(framesToWrite);
+                // Aggiorno il numero di read
+                nRead += framesToWrite.length
+                document.getElementById('read-count').textContent = nRead;
+
+                applicationState = States.ChildrenInBuffer;
+                if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
+                callback();
+            });
 
             break;
 
 
         case States.ChildrenInBuffer:
+            var oldFramesValues = [];
+            for (frame of buffer.frames)
+                oldFramesValues.push(frame.getValues());
+            rollback.push([() => buffer.undoSortAnimation(oldFrameValues), States.ChildrenInBuffer, textBox.innerHTML])
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
             // se invece c'è un frame che è stato svuotato allora va riempito (caso 2)
-            buffer.sortAnimation(
+            tween = buffer.sortAnimation(
                 time / 5,
                 () => {
                     applicationState = States.OutputFrameFullMerging;
@@ -668,7 +751,7 @@ function play(time = animTime) {
             frame.color = newColor
 
             // Copia l'output frame nella relazione
-            relation.writeWithAnimation(frame, frame.color, time, () => {
+            tween = relation.writeWithAnimation(frame, frame.color, time, () => {
                 // Aggiorno il valore del numero di write
                 nWrite += 1
                 document.getElementById('write-count').textContent = nWrite;
@@ -695,6 +778,32 @@ function play(time = animTime) {
 
     console.log("I'm in state: " + applicationState);
 }
+
+
+// Funzione per terminare un tween
+function endTween(tween) {
+    if (tween == null)
+        return ;
+    console.log("Il tween: ", tween)
+    // Il tween viene stoppato
+    tween.stop();
+    // I valori modificati dal tween vengono impostati al loro valore finale
+    for (var obj in tween._valuesEnd) {
+        for (var key in tween._valuesEnd[obj])
+            tween._object[obj][key] = tween._valuesEnd[obj][key];
+    }
+    // E' richiamata la funzione di completamento
+    if (tween._onCompleteCallback)
+        tween._onCompleteCallback();
+    // Tutti i tween concatenati a questo sono fatti terminare, richiamandone anche la funzione di start
+    var chainedTweens = tween._chainedTweens;
+    for (var i = 0; i < chainedTweens.length; i++) {
+        if (chainedTweens[i]._onStartCallback)
+            chainedTweens[i]._onStartCallback();
+        endTween(chainedTweens[i]);
+    }
+}
+
 
 async function callback() {
     playing = false;    // per dire che l'esecuzione attuale e' terminata
@@ -753,6 +862,8 @@ function animateOneSquare(start_x, start_y, end_x, end_y, start_size, end_size, 
         });
 
     tween.start();
+
+    return tween;
 }
 
 // Come animateOneSquare, solo che start_x, start_y, end_x, end_y, size, e color ora
@@ -792,6 +903,8 @@ function animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_
         });
 
     tween.start();
+
+    return tween;
 }
 
 
