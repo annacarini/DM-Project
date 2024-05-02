@@ -19,7 +19,7 @@
         <div id="menu" style="position: fixed; z-index: 2; width:100%; height:100%;">
             <div style="position: fixed; z-index: 2; border-radius: 15px;
              top: 50%; left: 50%; transform: translate(-50%, -50%); background-color:rgb(255, 255, 255);">
-                <!-- IMMAGINE TITOLO -->
+                <!-- TITOLO -->
                 <img src="images/title-4.png" style="width:25vw;"/><br/>
 
                 <!-- Controlli -->
@@ -46,7 +46,7 @@
             </div>
             <!-- sfondo nero mezzo trasparente per coprire le cose dietro -->
             <div style="position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0, 0, 0, 0.6);">
-                <div class="area" >
+                <!--div class="area" >
                     <ul class="circles">
                             <li></li>
                             <li></li>
@@ -59,11 +59,10 @@
                             <li></li>
                             <li></li>
                     </ul>
-                </div >
+                </div-->
             </div>
         </div>
         <!-- BOTTONE RESTART -->
-        <!--button id="restart_button" style="position: absolute; top: 10px; right: 10px;" onclick="openMenu();" hidden>Restart</button-->
         <span id="restart_button" hidden>
             <button class="button-56-small" type="button" style="position: absolute; top: 5px; right: 10px;" onclick="openMenu();">
                 Restart
@@ -71,38 +70,32 @@
         </span>
         <div id="simulation" style="width:100%; height:100%;">
             <!-- COLONNA A SX-->
-            <div id="column_sx" style="width:20%; height:100%; /*background-color: rgb(188, 223, 174);*/ position:fixed;
-            box-shadow: 3px 0px 3px rgba(0, 0, 0, 0.5);">
+            <div id="column_sx" style="width:20%; height:100%; position:fixed; box-shadow: 3px 0px 3px rgba(0, 0, 0, 0.5);">
                 <!-- TITOLO -->
-                <!--div style="position:relative; top:4vh; width:90%; left:50%; transform:translate(-50%);
-                text-align:center; font-family:Calibri; font-size:2vw; font-weight:bold;">
-                    External Multi-Pass<br/>
-                    Sorting
-                </div-->
                 <img src="images/title-4.png" style="width:20vw;"/><br/>
                 <!-- CASELLA TESTO per spiegare cosa stiamo facendo -->
-                <div style="position:relative; top:3vh; width:90%; height:fit-content; min-height:15%; left:50%; transform:translate(-50%);
-                border: 3px solid rgba(0, 0, 0, 0.7); border-radius:8px; padding:1%;">
-                    <div id="text_box" style="font-family:Calibri; font-size:1.25vw; padding: 5px;">
+                <div style="position:relative; top:3vh; width:90%; height:fit-content; min-height:18vh; left:50%; transform:translate(-50%);
+                border: 3px solid rgba(0, 0, 0, 0.7); border-radius:8px; padding:1%; /*background-image: linear-gradient(#bbb 0%, #fff 3%, #fff 100%);*/">
+                    <div id="text_box" style="font-family:Calibri; font-size:1.25vw; padding: 1.5vh 1.5vw;">
                         Waiting to start.
                     </div>
                 </div>
                 <!-- CASELLA DI TESTO per mostrare il numero di letture I/O -->
-                <div style="position:relative; top:8vh; width: 65%; height:fit-content; min-height:5%; left:50%; transform:translate(-50%);
-                font-family:Calibri; font-size:1.25vw;">
-                    <div style="text-align:center; font-weight:bold;">N. I/O</div>
-                    <div style="display: flex;">
+                <div style="position:relative; top:8vh; width: 90%; height:fit-content; min-height:5%; padding:1%; left:50%; transform:translate(-50%);
+                font-family:Calibri; font-size:1.25vw; border-radius:8px; border: 3px solid rgba(0, 0, 0, 0.7);">
+                    <div style="text-align:center; font-weight:bold; padding:2vh 0;"># I/O operations:</div>
+                    <div style="display: flex; padding: 0 1.5vw;">
                         <div style="flex: 1;">Read</div>
                         <div id="read-count" style="flex: 1; text-align: right;">0</div>
                     </div>
-                    <div style="display: flex;">
+                    <div style="display: flex; padding: 0 1.5vw; padding-bottom: 2vh;">
                         <div style="flex: 1;">Write</div>
                         <div id="write-count" style="flex: 1; text-align: right;">0</div>
                     </div>
                 </div>
                 <!-- PULSANTI -->
-                <div style="position:relative; top:18vh; height:fit-content; width:fit-content; left:50%; transform:translateX(-50%);">
-
+                <div style="position:relative; top:14vh; height:fit-content; width:90%; min-width: fit-content; left:50%; transform:translateX(-50%);
+                /*background-color: #f3f3f3;*/ padding: 1.5vh 0.4vw; border-radius: 15px; text-align: center;">
                     <button id="back_button" class="animation_btn" type="button" title="Back" onclick="" disabled="true">
                         <img class="animation_btn_img" src="images/buttons/back.png"/>
                     </button>
@@ -115,7 +108,7 @@
                     <button id="step_button" class="animation_btn" type="button" title="Play one step" onclick="playOne();">
                         <img class="animation_btn_img" src="images/buttons/play_one.png"/>
                     </button>
-                    <button id="jump_button" class="animation_btn" type="button" title="Jump" style="margin-right:0.6vw;" onclick="playOne(0);">
+                    <button id="jump_button" class="animation_btn" type="button" title="Jump" style="margin-right:0;" onclick="playOne(0);">
                         <img class="animation_btn_img" src="images/buttons/jump.png"/>
                     </button>
 

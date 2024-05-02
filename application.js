@@ -135,7 +135,7 @@ function createCustomTexture(width, height, backgroundColor, barColor, barWidth,
 // MESSAGGI
 const Messages = {
 	currentGroupMustBeSorted: "The current group must be sorted.",
-    currentGroupDoesNotFit: "The current group doesn't fit in the buffer, so must be split.",
+    currentGroupDoesNotFit: "The current group doesn't fit in the buffer, so it must be split.",
     currentGroupFitsInBuffer: "The current group fits in the buffer, so it will be copied there.",
     childrenMustBeMergeSorted: "These sub-groups have been individually sorted, now they must be merged.",
     outputFrameFull: "The output frame is full, so it must be written back in the relation.",
@@ -501,6 +501,7 @@ function play(time = animTime) {
                 applicationState = States.Finish;
                 relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
                 showMessage(Messages.finished);
+                pauseButton.disabled = true;
                 callback();
             }
             // Altrimenti vedi se ha un fratello
@@ -693,6 +694,9 @@ function play(time = animTime) {
             });
             break;
 
+        case States.Finish:
+            playing = false;
+            break;
 
         default:
             break;

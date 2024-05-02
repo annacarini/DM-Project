@@ -133,7 +133,7 @@ input:checked + .slider:before {
   
 .button-56-small {
     align-items: center;
-    background-color: #80d0dd;
+    background-color: #ffffff;
     border: 2px solid #111;
     border-radius: 8px;
     box-sizing: border-box;
@@ -175,7 +175,7 @@ input:checked + .slider:before {
   }
   
   .button-56-small:active {
-    background-color: #4fb3c3;
+    background-color: #8dc8d1;
     outline: 0;
   }
   
@@ -196,10 +196,9 @@ input:checked + .slider:before {
 
 .animation_btn {
     position: relative;
-    left: 0.3vw;
     top: 0.3vw;
-    width: 3.3vw;
-    height: 3.3vw;
+    width: 3.15vw;
+    height: 3.15vw;
     background-color: #111;
     border-radius: 4vw;
     border:0;
@@ -215,8 +214,8 @@ input:checked + .slider:before {
 
 .animation_btn_img{
     position: relative;
-    width: 3.3vw;
-    height: 3.3vw;
+    width: 3.15vw;
+    height: 3.15vw;
     transform: translateY(-0.5vh);
 }
 /*
