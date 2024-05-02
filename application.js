@@ -727,8 +727,8 @@ function play(time = animTime) {
                 var startingIndx = relation.getIndx(relation.currentGroup.children[0].value[0]);
                 var emptyFrame = relation.availableFrames[relation.availableFrames.length - 1];
                 var emptyIndx = relation.getIndx(emptyFrame);
-                var diff = emptyIndx - startingIndx;
-                var swap = diff - dec;
+                var swap = emptyIndx - startingIndx - relation.availableFrames.length + 1;
+                console.log("LO SWAP", swap);
                 //var relationIndx = relation.getIndx(relation.availableFrames[relation.availableFrames.length - 1]);
                 rollback.push([() => {
                     buffer.undoWriteOnBufferFrame(frameEmptyIndx);
