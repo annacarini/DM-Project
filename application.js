@@ -22,6 +22,7 @@ const States = {
 }
 
 var applicationState = States.Start;    // Tiene lo stato attuale dell'applicazione
+var applicationStatePrevious = States.Start;
 
 // PER GESTIRE L'ANIMAZIONE
 var playOneStepButton = null;
@@ -206,14 +207,14 @@ function startSimulation() {
     // Aggiungi controlli da tastiera (va fatto ora se no uno poteva premere la barra spaziatrice prima di avviare la simulazione)
     document.onkeydown = function(e) {
         switch (e.key) {
-            /*
+            
             case "ArrowLeft":     
                 e.preventDefault();       
+                undo();
                 break;
-            */
             case "ArrowRight":
                 e.preventDefault();
-                playOne();
+                playOne(0);
                 break;
 
             case " ":
@@ -379,6 +380,9 @@ function pause() {
 
 
 function undo() {
+
+    if (playing) return;
+
     //endTween(tween);
     if (rollback.length) {
         var lastAction = rollback[rollback.length -  1];
@@ -428,7 +432,7 @@ function play(time = animTime) {
             if (currentGroup.value.length > bufferSize - 1) {
                 var oldColor = currentGroup.value[0].color
                 relation.splitGroup(bufferSize - 1);
-                rollback.push([() => relation.undoSplitGroup(oldColor), States.GroupToSort, textBox.innerHTML])
+                rollback.push([() => relation.undoSplitGroup(oldColor), applicationStatePrevious, textBox.innerHTML])
 
                 // Questo controllo e' per mostrare il messaggio giusto
                 if (!automaticPlay) {
@@ -588,23 +592,6 @@ function play(time = animTime) {
         case States.GroupToMerge:
             var currentGroup = relation.getCurrentGroup();
 
-            /*const oldFrameValues = [];
-            const oldColors = [];
-            const oldPositions = [];
-            for (var j = 0; j < currentGroup.children.length; j++) {
-                var frames = [];
-                var colors = [];
-                var positions = [];
-                for (var i = 0; i < currentGroup.children[j].value.length; i++) {
-                    frames.push(currentGroup.children[j].value[i].getValues());
-                    colors.push(currentGroup.children[j].value[i].color);
-                    positions.push([currentGroup.children[j].value[i].x, currentGroup.children[j].value[i].y]);
-                }
-                oldFrameValues.push(frames);
-                oldColors.push(colors);
-                oldPositions.push(positions);
-            }*/
-
             // Prendi tutti i siblings
             var siblings = currentGroup.children;
         
@@ -651,15 +638,20 @@ function play(time = animTime) {
             console.log(emptyFramesSwap);
 
             rollback.push([async () => {
+                // Annulla lo shift
                 for (var i = framesToWrite.length - 1; i >= 0; i--) {
                     //relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
                     relation.undoShiftFramesAnna(framesToWrite[i]);
                 }
+                // Annulla la scrittura sul buffer
                 buffer.undoWriteOnBuffer();
                 //relation.undoAnimateMultipleSquares(framesToWrite[0], oldFrameValues, oldColors, oldPositions);
-                console.log("LA RELATION", relation.relationArray);
-                //for (var i = framesToWrite.length - 1; i >= 0; i--)
-                //    relation.undoReadOnePageOfChild(framesToWrite[i]);
+                //console.log("LA RELATION", relation.relationArray);
+                // Annulla la lettura dalla relation (ovvero, ri-scrivi i dati nella relation)
+                for (var i = framesToWrite.length - 1; i >= 0; i--) {
+                    relation.undoReadOnePageOfChild(framesToWrite[i]);
+                }
+                
                 console.log("IL VALORE DI CURRENT group", relation.currentGroup)
                 nRead -= framesToWrite.length;
                 document.getElementById('read-count').textContent = nRead;
@@ -690,6 +682,7 @@ function play(time = animTime) {
 
 
         case States.ChildrenInBuffer:
+            console.log("previous state: ", applicationStatePrevious);
             var oldToRefill = buffer.frameRefilled;
             var oldFramesValues = [];
             for (frame of buffer.frames)
@@ -699,7 +692,7 @@ function play(time = animTime) {
                 buffer.framesToRefill = [];
                 buffer.undoSortAnimation(oldFramesValues);
                 buffer.frameRefilled = oldToRefill;
-            }, States.ChildrenInBuffer, textBox.innerHTML])
+            }, applicationStatePrevious, textBox.innerHTML])
             
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
             // se invece c'è un frame che è stato svuotato allora va riempito (caso 2)
@@ -728,7 +721,8 @@ function play(time = animTime) {
                 var relationIndx = relation.getIndx(relation.availableFrames[relation.availableFrames.length - 1]);
                 rollback.push([() => {
                     buffer.undoWriteOnBufferFrame(frameEmptyIndx);
-                    relation.undoAnimateOneSquare(relationIndx);
+                    //relation.undoAnimateOneSquare(relationIndx);
+                    relation.undoShiftFramesAnna(fr);
                     relation.undoReadOnePageOfChild(fr);
                     buffer.framesToRefill.push(frameEmptyIndx);
                     nRead -= 1;
@@ -844,11 +838,21 @@ function play(time = animTime) {
             break;
 
 
+        case States.Finish:
+            playing = false;
+            rollback.push([() => {
+                console.log("highlighing from finish");
+                relation.highlightGroup(relation.getCurrentGroup(), "highlighters")
+            }, applicationStatePrevious, textBox.innerHTML]);
+            break;
+    
+
         default:
             break;
     }
 
     console.log("I'm in state: " + applicationState);
+    applicationStatePrevious = applicationState;
 }
 
 
