@@ -650,12 +650,14 @@ function play(time = animTime) {
             }
             console.log(emptyFramesSwap);
 
-            rollback.push([() => {
+            rollback.push([async () => {
+                for (var i = framesToWrite.length - 1; i >= 0; i--) {
+                    //relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
+                    await relation.undoShiftFramesAnna(framesToWrite[i]);
+                }
                 buffer.undoWriteOnBuffer();
-                for (var i = framesToWrite.length - 1; i >= 0; i--)
-                    relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
                 //relation.undoAnimateMultipleSquares(framesToWrite[0], oldFrameValues, oldColors, oldPositions);
-                console.log("LA RELATON", relation.relationArray);
+                console.log("LA RELATION", relation.relationArray);
                 //for (var i = framesToWrite.length - 1; i >= 0; i--)
                 //    relation.undoReadOnePageOfChild(framesToWrite[i]);
                 console.log("IL VALORE DI CURRENT group", relation.currentGroup)
@@ -668,7 +670,6 @@ function play(time = animTime) {
                 // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
                     
                 for (let i = 0; i < framesToWrite.length; i++) {
-                    console.log("sto shiftando");
                     relation.shiftFramesByOne(framesToWrite[i]);
                 }
                     

@@ -764,7 +764,7 @@ class Relation {
     // Questa scambia due frame, sia cambiando il loro indice dentro relationArray, sia
     // scambiando le loro posizioni
     swapFrames(i, j) {
-        //console.log("swapping " + i + " and " + j);
+        console.log("swapping " + i + " and " + j);
         var pos_i = [this.relationArray[i].x, this.relationArray[i].y];
         var pos_j = [this.relationArray[j].x, this.relationArray[j].y];
         var frame_i = this.relationArray[i];
@@ -889,15 +889,56 @@ class Relation {
     undoShiftFramesByOne(startingIndx, swap) {
         var lastEmpty = startingIndx;
         for (var i = startingIndx; i < this.relationArray.length - 1; i++) {
-            if (!this.relationArray[i].elements.length && this.relationArray[i].elements.length) {
+            // se il frame attuale e' vuoto ma il frame dopo e' pieno (cioe' se questo e' l'ultimo frame vuoto)
+            if (!this.relationArray[i].elements.length && this.relationArray[i+1].elements.length) {
                 lastEmpty = i;
                 break;
             }
         }
-        console.log("Lo startind", startingIndx, "Lo swap", swap);
+        console.log("Lo starting", startingIndx, "Lo swap", swap);
         for (var j = 0; j < swap; j++) {
-            console.log("FACciaomo lo swap");
+            console.log("Facciamo lo swap");
             this.swapFrames(lastEmpty + j, lastEmpty + j + 1)
+        }
+
+    }
+
+    async undoShiftFramesAnna(frameDestination) {
+        // a partire dall'inizio, cerca l'ultimo frame vuoto. questo va riportato nella posizione di frameDestination
+        var frameToMove = this.relationArray[0];
+        var shifting = false;
+
+        for (var i = 0; i < this.relationArray.length; i++) {
+            // cerca l'ultimo frame vuoto
+            if (!shifting) {
+                // se il frame attuale e' vuoto ma il frame dopo e' pieno (cioe' se questo e' l'ultimo frame vuoto)
+                if (this.relationArray[i].elements.length == 0 && (i >= this.relationArray.length - 1 || this.relationArray[i+1].elements.length > 0)) {
+                    frameToMove = this.relationArray[i];
+                    console.log("found last empty frame at: " + i);
+
+                    // se e' gia' l'ultimo frame non fare nulla
+                    if (i == this.relationArray.length - 1) {
+                        return;
+                    }
+
+                    shifting = true;
+                }
+            }
+            // shifta l'ultimo frame vuoto fino alla posizione puntata da frameDestination
+            if (shifting) {
+                if (frameToMove.x == frameDestination.x && frameToMove.y == frameDestination.y) {
+                    console.log("shifting done");
+                    return;
+                }
+                else if (i < this.relationArray.length - 1) {
+                    this.swapFrames(i, i+1);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                else {
+                    console.log("i: ", i);
+                }
+            }
+
         }
 
     }
