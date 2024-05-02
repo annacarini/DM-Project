@@ -656,8 +656,8 @@ function play(time = animTime) {
                     relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
                 //relation.undoAnimateMultipleSquares(framesToWrite[0], oldFrameValues, oldColors, oldPositions);
                 console.log("LA RELATON", relation.relationArray);
-                //for (var i = framesToWrite.length - 1; i >= 0; i--)
-                //    relation.undoReadOnePageOfChild(framesToWrite[i]);
+                for (var i = framesToWrite.length - 1; i >= 0; i--)
+                    relation.undoReadOnePageOfChild(framesToWrite[i]);
                 console.log("IL VALORE DI CURRENT group", relation.currentGroup)
                 nRead -= framesToWrite.length;
                 document.getElementById('read-count').textContent = nRead;
@@ -724,10 +724,16 @@ function play(time = animTime) {
             var fr = relation.readOnePageOfChild(frameEmptyIndx);
             if (fr) {
 
-                var relationIndx = relation.getIndx(relation.availableFrames[relation.availableFrames.length - 1]);
+                var startingIndx = relation.getIndx(relation.currentGroup.children[0].value[0]);
+                var emptyFrame = relation.availableFrames[relation.availableFrames.length - 1];
+                var emptyIndx = relation.getIndx(emptyFrame);
+                var diff = emptyIndx - startingIndx;
+                var swap = diff - dec;
+                //var relationIndx = relation.getIndx(relation.availableFrames[relation.availableFrames.length - 1]);
                 rollback.push([() => {
                     buffer.undoWriteOnBufferFrame(frameEmptyIndx);
-                    relation.undoAnimateOneSquare(relationIndx);
+                    relation.undoShiftFramesByOne(startingIndx, swap);
+                    //relation.undoAnimateOneSquare(relationIndx);
                     relation.undoReadOnePageOfChild(fr);
                     buffer.framesToRefill.push(frameEmptyIndx);
                     nRead -= 1;

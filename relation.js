@@ -889,7 +889,7 @@ class Relation {
     undoShiftFramesByOne(startingIndx, swap) {
         var lastEmpty = startingIndx;
         for (var i = startingIndx; i < this.relationArray.length - 1; i++) {
-            if (!this.relationArray[i].elements.length && this.relationArray[i].elements.length) {
+            if (!this.relationArray[i].elements.length && this.relationArray[i + 1].elements.length) {
                 lastEmpty = i;
                 break;
             }
