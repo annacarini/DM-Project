@@ -44,6 +44,19 @@ class Relation {
         var framePositionX = initialFramePositionX;
         var framePositionY = initialFramePositionY;
         
+
+        /* // Questo e' per centrare verticalmente la relazione
+        // Calcola quanto spazio occupano le righe
+        var rowsUsed = Math.ceil(relationSize/framesPerRow);
+        var rowsTotalSpace = (rowsUsed - 1) * (this.frameSize + this.spaceBetweenFrames) + this.frameSize;
+
+        // Posizione del primo frame: nell'angolo in alto a sx
+        var initialFramePositionX = x - width/2 + this.frameSize/2;
+        var initialFramePositionY = y - rowsTotalSpace/2 + this.frameSize/2;
+        var framePositionX = initialFramePositionX;
+        var framePositionY = initialFramePositionY;
+        */
+
         for (var i = 0; i < relationSize; i++) {
 
             // Genera valori da inserire nel frame
@@ -341,6 +354,23 @@ class Relation {
         var color = frames[frames.length - 1].color;
         this.changeGroupColor(this.currentGroup, color);
     }
+    
+
+    /*
+    // Unisce tutti i figli del gruppo attuale, mettendo i loro frame come "value" del gruppo attuale. Poi elimina i figli
+    mergeChildren() {
+
+        // Metti availableFrames come "value" del nodo attuale
+        this.currentGroup.value = this.availableFrames;
+
+        // Elimina i figli
+        this.currentGroup.children = [];
+
+        // Assegna il colore dell'ultimo frame a tutti i frame della lista (l'ultimo perche' cosi' e' sicuramente diverso da quello del gruppo dopo)
+        var color = this.availableFrames[this.availableFrames.length - 1].color;
+        this.changeGroupColor(this.currentGroup, color);
+    }
+    */
 
 
     // Serve per ordinare i frame in base alla loro posizione

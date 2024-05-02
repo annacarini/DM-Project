@@ -174,6 +174,7 @@ function onBodyLoad() {
 
 
 function openMenu() {
+    pause();
     document.getElementById("menu").removeAttribute("hidden");
 }
 
@@ -501,6 +502,10 @@ function play(time = animTime) {
                 applicationState = States.Finish;
                 relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
                 showMessage(Messages.finished);
+                // disabilita i pulsanti tanto hai finito
+                playButton.disabled = true;
+                playOneStepButton.disabled = true;
+                playJumpButton.disabled = true;
                 pauseButton.disabled = true;
                 callback();
             }

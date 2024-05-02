@@ -22,7 +22,7 @@ class Frame {
 
         this.sorted = false;
         this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.2)', this.size / 40, this.size / 12)
-        this.view = 1 // 0 relation, 1 buffer
+        this.view = true
 
         this.rect = two.makeRectangle(0, 0, this.size, this.size);
         this.rect.opacity = 0.75;
