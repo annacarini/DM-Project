@@ -653,7 +653,7 @@ function play(time = animTime) {
             rollback.push([async () => {
                 for (var i = framesToWrite.length - 1; i >= 0; i--) {
                     //relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
-                    await relation.undoShiftFramesAnna(framesToWrite[i]);
+                    relation.undoShiftFramesAnna(framesToWrite[i]);
                 }
                 buffer.undoWriteOnBuffer();
                 //relation.undoAnimateMultipleSquares(framesToWrite[0], oldFrameValues, oldColors, oldPositions);

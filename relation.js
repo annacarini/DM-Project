@@ -903,7 +903,7 @@ class Relation {
 
     }
 
-    async undoShiftFramesAnna(frameDestination) {
+    undoShiftFramesAnna(frameDestination) {
         // a partire dall'inizio, cerca l'ultimo frame vuoto. questo va riportato nella posizione di frameDestination
         var frameToMove = this.relationArray[0];
         var shifting = false;
@@ -932,7 +932,7 @@ class Relation {
                 }
                 else if (i < this.relationArray.length - 1) {
                     this.swapFrames(i, i+1);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    //await new Promise(resolve => setTimeout(resolve, 2000));
                 }
                 else {
                     console.log("i: ", i);
