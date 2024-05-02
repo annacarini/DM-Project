@@ -1,6 +1,14 @@
 
 /* Slider */
 
+.range-slider {
+    accent-color: #80d0dd;
+    width: 15vw;
+}
+
+
+/* Switch */
+
 .switch {
     position: relative;
     display: inline-block;
@@ -60,3 +68,333 @@ input:checked + .slider:before {
 .slider.round:before {
     border-radius: 50%;
 }
+
+
+/* Pulsanti */
+
+.button-56 {
+    align-items: center;
+    background-color: #80d0dd;
+    border: 2px solid #111;
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #000000;
+    cursor: pointer;
+    display: flex;
+    font-family: Calibri;
+    font-size: 1.25vw;
+    height: 8vh;
+    justify-content: center;
+    line-height: 24px;
+    max-width: 100%;
+    padding: 0 25px;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  
+  .button-56:after {
+    background-color: #111;
+    border-radius: 8px;
+    content: "";
+    display: block;
+    height: 8vh;
+    left: 0;
+    width: 100%;
+    position: absolute;
+    top: -2px;
+    transform: translate(0, 0.5vh);
+    transition: transform .2s ease-out;
+    z-index: -1;
+  }
+  
+  .button-56:hover:after {
+    transform: translate(0, 0);
+  }
+  
+  .button-56:active {
+    background-color: #4fb3c3;
+    outline: 0;
+  }
+  
+  .button-56:hover {
+    outline: 0;
+  }
+  
+  @media (min-width: 768px) {
+    .button-56 {
+      padding: 0 15px;
+    }
+  }
+
+  
+.button-56-small {
+    align-items: center;
+    background-color: #80d0dd;
+    border: 2px solid #111;
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #000000;
+    cursor: pointer;
+    display: flex;
+    font-family: Calibri;
+    font-size: 1.05vw;
+    height: 3.8vh;
+    justify-content: center;
+    line-height: 24px;
+    max-width: 100%;
+    padding: 0 0.8vw;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  
+  .button-56-small:after {
+    background-color: #111;
+    border-radius: 8px;
+    content: "";
+    display: block;
+    height: 4vh;
+    left: 0;
+    width: 100%;
+    position: absolute;
+    top: -2px;
+    transform: translate(0, 0.2vh);
+    transition: transform .2s ease-out;
+    z-index: -1;
+  }
+  
+  .button-56-small:hover:after {
+    transform: translate(0, 0);
+  }
+  
+  .button-56-small:active {
+    background-color: #4fb3c3;
+    outline: 0;
+  }
+  
+  .button-56-small:hover {
+    outline: 0;
+  }
+  
+  @media (min-width: 768px) {
+    .button-56-small {
+      padding: 0 15px;
+    }
+  }
+
+
+
+
+/* Pulsanti animazione */
+
+.animation_btn {
+    position: relative;
+    left: 0.3vw;
+    top: 0.3vw;
+    width: 3.3vw;
+    height: 3.3vw;
+    background-color: #111;
+    border-radius: 4vw;
+    border:0;
+    margin-right:0.2vw;
+}
+.animation_btn:disabled {
+    opacity:0.5;
+    filter:grayscale(100%);
+}
+.animation_btn:disabled .animation_btn_img:hover {
+    transform: translateY(-0.5vh);
+}
+
+.animation_btn_img{
+    position: relative;
+    width: 3.3vw;
+    height: 3.3vw;
+    transform: translateY(-0.5vh);
+}
+/*
+.animation_btn_img:hover {
+    display: block;
+    position: absolute;
+    transform: translate(0, -1vw);
+    transition: transform .2s ease-out;
+}
+*/
+.animation_btn_img:hover {
+    transform: translateY(-0.2vh);
+}
+.animation_btn_img:hover:after {
+    transform: translateY(-0.5vh);
+}
+
+
+/* Quadrati fluttuanti sfondo */
+
+@import url('https://fonts.googleapis.com/css?family=Exo:400,700');
+
+*{
+    margin: 0px;
+    padding: 0px;
+}
+
+/*
+body{
+    font-family: 'Exo', sans-serif;
+}
+*/
+
+.context {
+    width: 100%;
+    position: absolute;
+    top:50vh;
+    
+}
+
+.context h1{
+    text-align: center;
+    color: #fff;
+    font-size: 50px;
+}
+
+
+.area{
+    /*background: #4e54c8;  
+    background: -webkit-linear-gradient(to left, #8f94fb, #4e54c8);  */
+    width: 100%;
+    height:100vh;
+    
+   
+}
+
+.circles{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.circles li{
+    position: absolute;
+    display: block;
+    list-style: none;
+    width: 20px;
+    height: 20px;
+    /*background: rgba(255, 255, 255, 0.2);*/
+    background: #80d1dd7f;
+    animation: animate 25s linear infinite;
+    bottom: -150px;
+    
+}
+
+.circles li:nth-child(1){
+    left: 25%;
+    width: 80px;
+    height: 80px;
+    animation-delay: 0s;
+}
+
+
+.circles li:nth-child(2){
+    left: 10%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 2s;
+    animation-duration: 12s;
+}
+
+.circles li:nth-child(3){
+    left: 70%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 4s;
+}
+
+.circles li:nth-child(4){
+    left: 40%;
+    width: 60px;
+    height: 60px;
+    animation-delay: 0s;
+    animation-duration: 18s;
+}
+
+.circles li:nth-child(5){
+    left: 65%;
+    width: 20px;
+    height: 20px;
+    animation-delay: 0s;
+}
+
+.circles li:nth-child(6){
+    left: 75%;
+    width: 110px;
+    height: 110px;
+    animation-delay: 3s;
+}
+
+.circles li:nth-child(7){
+    left: 35%;
+    width: 150px;
+    height: 150px;
+    animation-delay: 7s;
+}
+
+.circles li:nth-child(8){
+    left: 50%;
+    width: 25px;
+    height: 25px;
+    animation-delay: 15s;
+    animation-duration: 45s;
+}
+
+.circles li:nth-child(9){
+    left: 20%;
+    width: 15px;
+    height: 15px;
+    animation-delay: 2s;
+    animation-duration: 35s;
+}
+
+.circles li:nth-child(10){
+    left: 85%;
+    width: 150px;
+    height: 150px;
+    animation-delay: 0s;
+    animation-duration: 11s;
+}
+
+@keyframes animate {
+    0%{
+        transform: translateY(-1000px) rotate(0deg);
+        opacity: 1;
+        border-radius: 0;
+    }
+
+    100%{
+        transform: translateY(0) rotate(720deg);
+        opacity: 0;
+    }
+
+    /*
+    0%{
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+        border-radius: 0;
+    }
+
+    100%{
+        transform: translateY(-1000px) rotate(720deg);
+        opacity: 0;
+    }
+    */
+
+}
+

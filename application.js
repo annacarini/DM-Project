@@ -190,8 +190,12 @@ function startSimulation() {
 
     // Rendo visibile il bottone resume del menu. Cambio il messaggio del bottone start e la sua funzione onclick
     document.getElementById("resume").removeAttribute("hidden");
+    document.getElementById("start_simulation").innerHTML = "Restart";
+    document.getElementById("start_simulation").onclick = () => {reset(); closeMenu()};
+    /*
     document.getElementById("start_simulation").setAttribute("value", "Restart");
     document.getElementById("start_simulation").onclick = () => {reset(); closeMenu()};
+    */
 
     // Mostra il div simulation
     //var simulation = document.getElementById("simulation");
@@ -208,7 +212,7 @@ function startSimulation() {
             */
             case "ArrowRight":
                 e.preventDefault();
-                playOne();
+                playOne(0);
                 break;
 
             case " ":
@@ -341,9 +345,10 @@ function playAll() {
     // attiva riproduzione automatica
     automaticPlay = true;
 
-    // disattiva pulsante step
+    // disattiva pulsanti step, jump e play
     playOneStepButton.disabled = true;
-    playJumpButton.disabled = true
+    playJumpButton.disabled = true;
+    playButton.disabled = true;
 
     // attiva pulsante pausa
     pauseButton.disabled = false;

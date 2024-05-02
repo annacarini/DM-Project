@@ -18,7 +18,7 @@ class Relation {
 
     // PARAMETRI PER GRAFICA
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
-    frameColor = "hsl(188, 94%, 80%)";
+    frameColor = " 	hsl(188, 74%, 72%)"; //"hsl(188, 94%, 80%)";
     highlightersSortColor = "black";
     highlightersSortMargin = 2;
     highlightersColor = "black";
