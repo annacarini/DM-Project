@@ -491,6 +491,7 @@ function play(time = animTime) {
             var oldFramesValues = [];
             for (frame of buffer.frames)
                 oldFramesValues.push(frame.getValues());
+            oldFramesValues.push(buffer.outputFrame.getValues());
             rollback.push([() => buffer.undoSortAnimation(oldFramesValues), States.GroupInBuffer, textBox.innerHTML]);
 
             // Avvia il sort
@@ -503,9 +504,10 @@ function play(time = animTime) {
     
         case States.OutputFrameFullSorting:
             const oldValues = buffer.outputFrame.getValues();
+            var freeAvailableFrame = relation.getFreeAvailableFrame();
             rollback.push([() => {
                 buffer.undoFlushOutputFrame(oldValues);
-                relation.undoWriteWithAnimation();
+                relation.undoWriteWithAnimation(freeAvailableFrame);
                 nWrite -= 1;
                 document.getElementById('write-count').textContent = nWrite;
             }, States.OutputFrameFullSorting, textBox.innerHTML]);
@@ -586,7 +588,7 @@ function play(time = animTime) {
         case States.GroupToMerge:
             var currentGroup = relation.getCurrentGroup();
 
-            const oldFrameValues = [];
+            /*const oldFrameValues = [];
             const oldColors = [];
             const oldPositions = [];
             for (var j = 0; j < currentGroup.children.length; j++) {
@@ -601,7 +603,7 @@ function play(time = animTime) {
                 oldFrameValues.push(frames);
                 oldColors.push(colors);
                 oldPositions.push(positions);
-            }
+            }*/
 
             // Prendi tutti i siblings
             var siblings = currentGroup.children;
@@ -635,11 +637,28 @@ function play(time = animTime) {
                 color.push(fr.color);
             }
 
+            var startingIndx = relation.getIndx(currentGroup.children[0].value[0]);
+            var emptyFramesSwap = [];
+            var dec = 0;
+            for (var i = framesToWrite.length; i > 0; i--) {
+                var emptyFrame = relation.availableFrames[relation.availableFrames.length - i];
+                var emptyIndx = relation.getIndx(emptyFrame);
+                var diff = emptyIndx - startingIndx;
+                emptyFramesSwap.push(diff - dec);
+                if (diff >= 0)
+                    dec += 1;
+            }
+            console.log(emptyFramesSwap);
+
             rollback.push([() => {
                 buffer.undoWriteOnBuffer();
-                relation.undoAnimateMultipleSquares(oldFrameValues, oldColors, oldPositions);
-                for (var i = 0; i < framesToWrite.length; i++)
-                    relation.undoReadOnePageOfChild();
+                for (var i = framesToWrite.length - 1; i >= 0; i--)
+                    relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
+                //relation.undoAnimateMultipleSquares(framesToWrite[0], oldFrameValues, oldColors, oldPositions);
+                console.log("LA RELATON", relation.relationArray);
+                //for (var i = framesToWrite.length - 1; i >= 0; i--)
+                //    relation.undoReadOnePageOfChild(framesToWrite[i]);
+                console.log("IL VALORE DI CURRENT group", relation.currentGroup)
                 nRead -= framesToWrite.length;
                 document.getElementById('read-count').textContent = nRead;
             }, States.GroupToMerge, textBox.innerHTML]);
@@ -659,6 +678,8 @@ function play(time = animTime) {
                 nRead += framesToWrite.length
                 document.getElementById('read-count').textContent = nRead;
 
+                console.log("LA RELATON DOPO FUN", relation.relationArray);
+
                 applicationState = States.ChildrenInBuffer;
                 if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
                 callback();
@@ -668,10 +689,17 @@ function play(time = animTime) {
 
 
         case States.ChildrenInBuffer:
+            var oldToRefill = buffer.frameRefilled;
             var oldFramesValues = [];
             for (frame of buffer.frames)
                 oldFramesValues.push(frame.getValues());
-            rollback.push([() => buffer.undoSortAnimation(oldFrameValues), States.ChildrenInBuffer, textBox.innerHTML])
+            oldFramesValues.push(buffer.outputFrame.getValues());
+            rollback.push([() => {
+                buffer.framesToRefill = [];
+                buffer.undoSortAnimation(oldFramesValues);
+                buffer.frameRefilled = oldToRefill;
+            }, States.ChildrenInBuffer, textBox.innerHTML])
+            
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
             // se invece c'è un frame che è stato svuotato allora va riempito (caso 2)
             tween = buffer.sortAnimation(
@@ -691,10 +719,21 @@ function play(time = animTime) {
         
         case States.OneEmptyFrameInBuffer:       
 
-            var frameEmptyIndx = buffer.frameToRefill;
+            var frameEmptyIndx = buffer.framesToRefill.pop();
 
             var fr = relation.readOnePageOfChild(frameEmptyIndx);
             if (fr) {
+
+                var relationIndx = relation.getIndx(relation.availableFrames[relation.availableFrames.length - 1]);
+                rollback.push([() => {
+                    buffer.undoWriteOnBufferFrame(frameEmptyIndx);
+                    relation.undoAnimateOneSquare(relationIndx);
+                    relation.undoReadOnePageOfChild(fr);
+                    buffer.framesToRefill.push(frameEmptyIndx);
+                    nRead -= 1;
+                    document.getElementById('read-count').textContent = nRead;
+                }, States.OneEmptyFrameInBuffer, textBox.innerHTML]);
+
                 // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
                 let endPos = buffer.getPositionOfFrame(frameEmptyIndx);
                 end_x = endPos[0];
@@ -710,7 +749,11 @@ function play(time = animTime) {
                         document.getElementById('read-count').textContent = nRead;
 
                         // Se l'output è pieno
-                        if (buffer.checkFullOutput()) {
+                        if (buffer.framesToRefill.length) {
+                            applicationState = States.OneEmptyFrameInBuffer;
+                            if (!automaticPlay) showMessage(Messages.emptyFrameInBuffer);
+                        }
+                        else if (buffer.checkFullOutput()) {
                             applicationState = States.OutputFrameFullMerging;
                             if (!automaticPlay) showMessage(Messages.outputFrameFull);
                         }
@@ -723,7 +766,8 @@ function play(time = animTime) {
                 });
             }
             else {
-                 // L'output è pieno
+                // L'output è pieno
+                rollback.push(() => {buffer.framesToRefill.push(frameEmptyIndx);}, States.OneEmptyFrameInBuffer, textBox.innerHTML);
                 if (buffer.checkFullOutput()) {
                     applicationState = States.OutputFrameFullMerging;
                     if (!automaticPlay) showMessage(Messages.outputFrameFull);
@@ -743,6 +787,33 @@ function play(time = animTime) {
 
         
         case States.OutputFrameFullMerging:
+
+            /* Per il rollback */
+            var currentGroup = relation.getCurrentGroup();
+
+            var freeAvailableFrame = relation.getFreeAvailableFrame();
+            const oldBufferValues = buffer.outputFrame.getValues();
+            const oldIndices = [];
+            for (var i = 0; i < currentGroup.children.length; i++) {
+                for (var j = 0; j < currentGroup.children[i].value.length; j++) {
+                    var frame = currentGroup.children[i].value[j];
+                    oldIndices.push([frame, i, j, relation.getAvailableFrameIndx(frame)]);
+                }
+            }
+            oldIndices.sort(compareFramesByPosition);
+            for (var i = 0; i < oldIndices.length; i++) {
+                oldIndices[i].shift()
+            }
+            rollback.push([() => {
+                buffer.undoFlushOutputFrame(oldBufferValues);
+                if (!buffer.bufferContainsSomething())
+                    relation.undoMergeChildren(oldIndices);
+                relation.undoWriteWithAnimation(freeAvailableFrame, oldIndices);
+                nWrite -= 1;
+                document.getElementById('write-count').textContent = nWrite;
+            }, States.OutputFrameFullMerging, textBox.innerHTML]);
+            /****************************/
+
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
 
@@ -864,6 +935,26 @@ function animateOneSquare(start_x, start_y, end_x, end_y, start_size, end_size, 
     tween.start();
 
     return tween;
+}
+
+function compareFramesByPosition( frame1, frame2 ) {
+    frame1 = frame1[0];
+    frame2 = frame2[0];
+    if (frame1.y < frame2.y) {  // frame 1 e' su una riga sopra, quindi va messo prima
+        return -1;
+    }
+    else if (frame1.y > frame2.y) {  // frame 1 e' su una riga dopo, quindi va messo dopo
+        return 1;
+    }
+    else {                             // sono sulla stessa riga
+        if (frame1.x < frame2.x) {      // frame 1 e' su una colonna piu' a sx, quindi va messo prima
+            return -1;
+        }
+        else if (frame1.x > frame2.x) {      // frame 1 e' su una colonna piu' a dx, quindi va messo dopo
+            return 1;
+        }
+    }
+    return 0;
 }
 
 // Come animateOneSquare, solo che start_x, start_y, end_x, end_y, size, e color ora

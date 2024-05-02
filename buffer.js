@@ -19,7 +19,7 @@ class Buffer {
         this._virtualFrames = Array(length, []);
         this._virtualOutputFrame = [];
         this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false);
-        this.frameToRefill = -1
+        this.framesToRefill = [];
 
         var spaceOutputFrame = 6;
         var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
@@ -120,11 +120,13 @@ class Buffer {
     // 2) Il frame non ha mai chiesto un refill -- oppure --
     //      l'ultima volta che il frame ha chiesto il refill è stato ricaricato
     checkToRefill() {
+        var toRefill = [];
+
         for (var i = 0; i < this.frames.length; i++) {
             if (!this.frames[i].getValues().length && this.frameRefilled[i])
-                return i
+                toRefill.push(i);
         }
-        return -1
+        return toRefill;
     }
 
 
@@ -261,9 +263,10 @@ class Buffer {
         this.sort(merge);
         var tween = new TWEEN.Tween(null).to(null, time).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
-                this.frameToRefill = this.checkToRefill();
-                if (merge && (this.frameToRefill != -1)) {
-                    this.frameRefilled[this.frameToRefill] = false;
+                this.framesToRefill = this.checkToRefill();
+                if (merge && (this.framesToRefill.length)) {
+                    for (var i = 0; i < this.framesToRefill.length; i++)
+                        this.frameRefilled[this.framesToRefill[i]] = false;
                     mergeCallback();
                 }
                 else
@@ -335,17 +338,22 @@ class Buffer {
     }
 
     undoSortAnimation(oldFramesValues) {
-        this.outputFrame.resetFrame();
-
-        for (var i = 0; i < oldFramesValues.length; i++) {
+        for (var i = 0; i < oldFramesValues.length - 1; i++) {
             this.frames[i].resetFrame();
             this.frames[i].fill(oldFramesValues[i]);
         }
+        this.outputFrame.resetFrame();
+        this.outputFrame.fill(oldFramesValues[oldFramesValues.length - 1]);
     }
 
     undoFlushOutputFrame(oldValues) {
-        console.log("OLD VALUES", oldValues);
         this.outputFrame.resetFrame();
         this.outputFrame.fill(oldValues);
+    }
+
+
+    undoWriteOnBufferFrame(indx) {
+        this.frames[indx].resetFrame();
+        this.frameRefilled[indx] = false;
     }
 }
