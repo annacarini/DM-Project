@@ -361,6 +361,6 @@ class Buffer {
         var textStyle = fontStyleSmallBlackCentered;
         textStyle.weight = 600;
         this.outputFrameTxt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
-                
+        this.group.add(this.outputFrameTxt);
     }
 }

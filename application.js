@@ -734,6 +734,10 @@ function play(time = animTime) {
 
         case States.Finish:
             playing = false;
+            automaticPlay = false;
+            pauseButton.disabled = true;
+            playJumpButton.disabled = true;
+            playButton.disabled = true;
             undoButton.disabled = false;
             break;
 
