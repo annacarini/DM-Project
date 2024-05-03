@@ -34,7 +34,7 @@
                     <span id="relation_size_value" style="position: relative; bottom: 6px; left: 8px; font-weight: bold;">9</span><br/>
                     <div style="text-align: center; margin-top:5vh;">
                         <span id="resume" style="padding-right:1vw;" hidden>
-                            <button class="button-56" type="button" style="display:inline-block;" onclick="closeMenu();">
+                            <button class="button-56" type="button" style="display:inline-block; background-color: #c4e2e7;" onclick="closeMenu();">
                                 Resume
                             </button>
                         </span>
@@ -139,14 +139,22 @@
             <!-- COLONNA CENTRALE -->
             <div id="column_center" style="position:fixed; z-index:-1; top:0; left:20%; width:80%; height:100%;" hidden>                
                 <!-- PARTE SOPRA (buffer)-->
-                <div id="column_center_upper_part" style="width:100%; height:37%; /*background-color: rgb(235, 139, 139);*/
-                border-bottom: 3px dashed rgba(0, 0, 0, 0.7);">
-
+                <div id="column_center_upper_part" style="width:100%; height:37%; border-bottom: 3px dashed rgba(0, 0, 0, 0.7);
+                font-family:Calibri; font-size:1.2vw; font-weight:bold;">
+                    <!-- Scritta buffer size -->
+                    <div style="position:relative; left: 3%; top: 95%; transform: translateY(-100%);">
+                        <div>BUFFER</div>
+                        <div id="buffer_size_text" style="color:rgb(79,79,79);">M = </div>
+                    </div>
                 </div>
 
                 <!-- PARTE SOTTO (relazione)-->
-                <div id="column_center_lower_part" style="width:100%; height:63%; /*background-color: rgb(139, 142, 235);*/">
-
+                <div id="column_center_lower_part" style="width:100%; height:63%; font-family:Calibri; font-size:1.2vw; font-weight:bold;">
+                    <!-- Scritta relation size -->
+                    <div style="position:relative; top: 2%; left: 3%;">
+                        <div>RELATION</div>
+                        <div id="relation_size_text" style="color:rgb(79,79,79);">B(R) = </div>
+                    </div>
                 </div>
             </div>
         </div>

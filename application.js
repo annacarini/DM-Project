@@ -299,14 +299,11 @@ function startSimulation() {
     }
 
 
-    // Scritta "Buffer" e dimensione buffer
-    bufferText = two.makeText("BUFFER", upperPart.bottomLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.25*upperPart.height, fontStyleMediumBlack);
-    bufferFramesText = two.makeText("M = " + bufferSize, upperPart.topLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.15*upperPart.height, fontStyleMediumGray); 
-    
-    // Scritta "Relation" e dimensione relazione
-    relationText = two.makeText("RELATION", lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.15*upperPart.height, fontStyleMediumBlack); 
-    relationFramesText = two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
-    
+    // Imposta scritte misura buffer e relazione
+    document.getElementById("buffer_size_text").innerHTML = "M = " + bufferSize;
+    document.getElementById("relation_size_text").innerHTML = "B(R) = " + relationSize;
+
+
     // CREA BUFFER         constructor(x, y, length, frameSize, two)
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
 
@@ -340,8 +337,9 @@ function reset() {
     relation.group.remove();    
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
-    bufferFramesText.value = 'M = ' + bufferSize;
-    relationFramesText.value = 'B(R) = ' + relationSize;
+    // Imposta scritte misura buffer e relazione
+    document.getElementById("buffer_size_text").innerHTML = "M = " + bufferSize;
+    document.getElementById("relation_size_text").innerHTML = "B(R) = " + relationSize;
     two.update();
 }
 
@@ -796,20 +794,6 @@ function redrawEverything() {
 
     // Aggiorna misure
     updateSizes();
-
-    // Rimuovi scritte
-    bufferText.remove();
-    bufferFramesText.remove();
-    relationText.remove();
-    relationFramesText.remove();
-
-    // Scritta "Buffer" e dimensione buffer
-    bufferText = two.makeText("BUFFER", upperPart.bottomLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.25*upperPart.height, fontStyleMediumBlack);
-    bufferFramesText = two.makeText("M = " + bufferSize, upperPart.topLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.15*upperPart.height, fontStyleMediumGray); 
-    
-    // Scritta "Relation" e dimensione relazione
-    relationText = two.makeText("RELATION", lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.15*upperPart.height, fontStyleMediumBlack); 
-    relationFramesText = two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
 
     // Ri disegna buffer
     buffer.redrawBuffer(upperPart.center.x, upperPart.center.y - 15);
