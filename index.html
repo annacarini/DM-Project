@@ -27,11 +27,11 @@
                 position: relative;  width: fit-content; left: 50%; transform: translateX(-50%);">
                     Number of frames in the buffer:<br/>
                     <input class="range-slider" type="range" id="buffer_size" min="3" max="10" value="3"/>
-                    <span id="buffer_size_value" style="position: relative; bottom: 6px; left: 8px;">3</span><br/>
+                    <span id="buffer_size_value" style="position: relative; bottom: 6px; left: 8px; font-weight: bold;">3</span><br/>
                     <div style="height:3vh;"></div>
                     Number of pages of the relation:<br/>
                     <input class="range-slider" type="range" id="relation_size" min="1" max="100" value="9"/>
-                    <span id="relation_size_value" style="position: relative; bottom: 6px; left: 8px;">9</span><br/>
+                    <span id="relation_size_value" style="position: relative; bottom: 6px; left: 8px; font-weight: bold;">9</span><br/>
                     <div style="text-align: center; margin-top:5vh;">
                         <span id="resume" style="padding-right:1vw;" hidden>
                             <button class="button-56" type="button" style="display:inline-block;" onclick="closeMenu();">
@@ -74,14 +74,14 @@
                 <!-- TITOLO -->
                 <img src="images/title-4.png" style="width:20vw;"/><br/>
                 <!-- CASELLA TESTO per spiegare cosa stiamo facendo -->
-                <div style="position:relative; top:3vh; width:90%; height:fit-content; min-height:18vh; left:50%; transform:translate(-50%);
+                <div style="position:relative; top:1vh; width:90%; height:fit-content; min-height:18vh; left:50%; transform:translate(-50%);
                 border: 3px solid rgba(0, 0, 0, 0.7); border-radius:8px; padding:1%; /*background-image: linear-gradient(#bbb 0%, #fff 3%, #fff 100%);*/">
                     <div id="text_box" style="font-family:Calibri; font-size:1.25vw; padding: 1.5vh 1.5vw;">
                         Waiting to start.
                     </div>
                 </div>
                 <!-- CASELLA DI TESTO per mostrare il numero di letture I/O -->
-                <div style="position:relative; top:8vh; width: 90%; height:fit-content; min-height:5%; padding:1%; left:50%; transform:translate(-50%);
+                <div style="position:relative; top:4vh; width: 90%; height:fit-content; min-height:5%; padding:1%; left:50%; transform:translate(-50%);
                 font-family:Calibri; font-size:1.25vw; border-radius:8px; border: 3px solid rgba(0, 0, 0, 0.7);">
                     <div style="text-align:center; font-weight:bold; padding:2vh 0;"># I/O operations:</div>
                     <div style="display: flex; padding: 0 1.5vw;">
@@ -94,12 +94,12 @@
                     </div>
                 </div>
                 <!-- PULSANTI -->
-                <div style="position:relative; top:14vh; height:fit-content; width:90%; min-width: fit-content; left:50%; transform:translateX(-50%);
+                <div style="position:relative; top:9vh; height:fit-content; width:90%; min-width: fit-content; left:50%; transform:translateX(-50%);
                 /*background-color: #f3f3f3;*/ padding: 1.5vh 0.4vw; border-radius: 15px; text-align: center;">
-                    <button id="back_button" class="animation_btn" type="button" title="Back" onclick="" disabled="true">
+                    <button id="undo_button" class="animation_btn" type="button" title="Back" onclick="">
                         <img class="animation_btn_img" src="images/buttons/back.png"/>
                     </button>
-                    <button id="pause_button" class="animation_btn" type="button" title="Pause" onclick="pause();" disabled="true">
+                    <button id="pause_button" class="animation_btn" type="button" title="Pause" onclick="pause();">
                         <img class="animation_btn_img" src="images/buttons/pause.png"/>
                     </button>
                     <button id="play_button" class="animation_btn" type="button" title="Play" onclick="playAll();">
@@ -111,17 +111,22 @@
                     <button id="jump_button" class="animation_btn" type="button" title="Jump" style="margin-right:0;" onclick="playOne(0);">
                         <img class="animation_btn_img" src="images/buttons/jump.png"/>
                     </button>
-
-                    <!--
-                    <input type="button" id="step_button" value="Play one step" onclick="playOne();" style=""/>
-                    <input type="button" id="play_button" value="Play" onclick="playAll();" style=""/>
-                    <input type="button" id="pause_button" value="Pause" onclick="pause();" style=""/>
-                    <input type="button" id="jump_button" value="Jump" onclick="playOne(0);" style=""/>
-                    -->
+                </div>
+                <!-- Pulsanti per accelerare/rallentare le animazioni -->
+                <div style="position:absolute; bottom:8.5vh; width:90%; min-width:fit-content; left:50%; transform:translateX(-50%); padding-left:0.5vw; text-align: right;">
+                    <div style="display:inline-block; font-family:Calibri; font-size:1.2vw; padding-right:0.5vw;">
+                        Animation speed
+                    </div>
+                    <button id="anim_faster" class="button-56-smaller" type="button" style="" onclick="">
+                        <span style="vertical-align:middle; padding-bottom:1vh; height:1vh;">+</span>
+                    </button>
+                    <button id="anim_slower" class="button-56-smaller" type="button" style="" onclick="">
+                        <span style="vertical-align:middle; padding-bottom:1vh; height:1vh;">–</span>
+                    </button>
                 </div>
                 <!-- SWITCH per attivare e disattivare i numeri nella relazione -->
-                <div title="" style="position:absolute; bottom:4vh; width:100%; left:50%; transform:translate(-50%); text-align:center;">
-                    <span style="display:inline-block; padding-right:8px; font-family:Calibri; font-size:1.2vw; transform:translateY(4%);">
+                <div title="" style="position:absolute; bottom:2.8vh; width:100%; left:50%; transform:translate(-50%); text-align:center;">
+                    <span style="display:inline-block; padding-right:8px; font-family:Calibri; font-size:1.2vw; transform:translateY(10%);">
                         Show content of relation pages
                     </span>
                     <label class="switch" style="vertical-align: middle;">

@@ -31,8 +31,8 @@
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    -webkit-transition: .4s;
-    transition: .4s;
+    /*-webkit-transition: .4s;
+    transition: .4s;*/
 }
 
 .slider:before {
@@ -43,8 +43,22 @@
     left: 0.208vw;
     bottom: 0.370vh;
     background-color: white;
-    -webkit-transition: .4s;
-    transition: .4s;
+    /*-webkit-transition: .4s;
+    transition: .4s;*/
+}
+.slider:after {
+    position: absolute;
+    content: "";
+    height: 1.5vw;
+    width: 1vw;
+
+    background-color: #111;
+    display: block;
+    left: 0;
+    width: 100%;
+    border-radius: 1.771vw;
+    transform: translate(0, 0.55vh);
+    z-index: -1;
 }
 
 input:checked + .slider {
@@ -130,6 +144,8 @@ input:checked + .slider:before {
     }
   }
 
+
+/* Pulsante restart */
   
 .button-56-small {
     align-items: center;
@@ -189,6 +205,73 @@ input:checked + .slider:before {
     }
   }
 
+/* Pulsanti velocita' + e - */
+
+  .button-56-smaller {
+    align-items: center;
+    background-color: #ffffff;
+    border: 2px solid #111;
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #000000;
+    cursor: pointer;
+    display: inline-block;
+    font-family: Calibri;
+    font-size: 1.5vw;
+    height: 3.8vh;
+    width:2vw;
+    justify-content: center;
+    line-height: 0;
+    padding: 0;
+    position: relative;
+    text-align: center;
+    font-weight: bold;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  
+  .button-56-smaller:after {
+    background-color: #111;
+    border-radius: 8px;
+    content: "";
+    height: 4vh;
+    left: 0;
+    width: 100%;
+    position: absolute;
+    top: -2px;
+    transform: translate(0, 0.15vh);
+    transition: transform .2s ease-out;
+    z-index: -1;
+  }
+  
+  .button-56-smaller:hover:after {
+    transform: translate(0, 0);
+  }
+  
+  .button-56-smaller:active:not(:disabled) {
+    background-color: #8dc8d1;
+    outline: 0;
+  }
+  
+  .button-56-smaller:hover:not(:disabled) {
+    outline: 0;
+  }
+
+  .button-56-smaller:disabled {
+    color: #7b7b7b;
+    border: 2px solid #7b7b7b;
+  }
+  .button-56-smaller:disabled:after {
+    background-color: #7b7b7b;
+    transform: translate(0, 0);
+  }
+  
+  @media (min-width: 768px) {
+    .button-56-smaller {
+      padding: 0;
+    }
+  }
 
 
 
@@ -200,9 +283,10 @@ input:checked + .slider:before {
     width: 3.15vw;
     height: 3.15vw;
     background-color: #111;
-    border-radius: 4vw;
+    border-radius: 3.15vw;
     border:0;
     margin-right:0.2vw;
+    cursor: pointer;
 }
 .animation_btn:disabled {
     opacity:0.5;

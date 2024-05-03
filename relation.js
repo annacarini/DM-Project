@@ -9,6 +9,10 @@ class Relation {
     // Nodo attuale, all'inizio e' tutta la relazione
     currentGroup;
 
+    // per il redraw degli highlighters
+    groupHighlightedSort = null;
+    groupHighlighted = null;
+
     // Frame liberi in cui andare a scrivere l'output
     availableFrames = [];
 
@@ -94,6 +98,7 @@ class Relation {
 
         // Poni il nodo attuale uguale a tutta la relazione
         this.currentGroup = this.relation;
+        this.currentGroupToSort = this.currentGroup;
     }
 
 
@@ -128,7 +133,7 @@ class Relation {
 
 
     setCurrentGroupToSort(group) {
-        this.currentGroup = group
+        this.currentGroup = group;
 
         this.highlightGroup(this.currentGroup, "highlightersSort");
 
@@ -143,7 +148,7 @@ class Relation {
     setCurrentGroup(group) {
         this.currentGroup = group;
 
-        // Elimino i grouppi da sortare evidenziati in precedenza
+        // Elimino i gruppi da sortare evidenziati in precedenza
         for (var i = this.highlightersSort.length - 1; i >= 0; i--) {
             this.highlightersSort[i].remove();
         }
@@ -190,11 +195,18 @@ class Relation {
         highlighters = [];
 
         if (groupNode == null) {    // cosi' chiamiamo la funzione con parametro null per de-evidenziare
+            if (nameHighl == "highlighters") {
+                this.groupHighlighted = null;
+            }
+            else if (nameHighl == "highlightersSort") {
+                this.groupHighlightedSort = null;
+            }
             return;
         }
 
         // prendi tutti i valori di questo nodo e di tutti i suoi discendenti
         var group = groupNode.getValueOfAllChildren();
+        group.sort( this.compareFramesByPosition );
 
         var firstFrameOfRow = group[0];
         var lastFrameOfRow = group[0];
@@ -223,6 +235,16 @@ class Relation {
 
         this[nameHighl] = highlighters
 
+        // salvati il fatto che hai evidenziato questo gruppo
+        if (nameHighl == "highlighters") {
+            this.groupHighlighted = groupNode;
+        }
+        else if (nameHighl == "highlightersSort") {
+            console.log("setting groupHighlightedSort: ");
+            console.log(groupNode);
+            this.groupHighlightedSort = groupNode;
+        }
+
         // Se c'e' una callback eseguila
         if (callback != null) callback();
     }
@@ -231,8 +253,8 @@ class Relation {
     makeRectangleAroundFrames(firstFrame, lastFrame, color, marginDistance) {
         var centerX = (firstFrame.x + lastFrame.x)/2;
         var centerY = firstFrame.y;
-        var width = lastFrame.x - firstFrame.x + firstFrame.size + marginDistance;
-        var height = firstFrame.size + marginDistance;
+        var width = lastFrame.x - firstFrame.x + firstFrame.realSize() + marginDistance;
+        var height = firstFrame.realSize() + marginDistance;
         var rect = this.two.makeRectangle(centerX, centerY, width, height);
         rect.stroke = color;
         rect.linewidth = this.highlighterThickness;
@@ -612,7 +634,7 @@ class Relation {
             framesToReturn.push({
                 x: this.currentGroup.value[i].x,
                 y: this.currentGroup.value[i].y,
-                size: this.currentGroup.value[i].size,
+                size: this.currentGroup.value[i].realSize(),
                 color: this.currentGroup.value[i].color,
                 elements: elems
             });
@@ -642,7 +664,7 @@ class Relation {
                 frameToReturn = {
                     x: child.value[i].x,
                     y: child.value[i].y,
-                    size: child.value[i].size,
+                    size: child.value[i].realSize(),
                     color: child.value[i].color,
                     elements: child.value[i].getValues(),
                     toRefill: (i < child.value.length-1)
@@ -694,7 +716,7 @@ class Relation {
                 // ANIMAZIONE
                 var end_x = this.availableFrames[i].x;
                 var end_y = this.availableFrames[i].y;
-                var end_size = this.availableFrames[i].size;
+                var end_size = this.availableFrames[i].realSize();
                 animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, time, () => {
                     // scrivi gli elementi
                     this.availableFrames[i].fill(frame.elements);
@@ -782,5 +804,89 @@ class Relation {
         // scambiali nell'array
         this.relationArray[i] = frame_j;
         this.relationArray[j] = frame_i;
+    }
+
+
+
+    // Da chiamare quando cambia la dimensione della finestra
+    redrawRelation(x, y, width, height, minimumFrameSize, applicationState) {
+
+        this.spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
+
+        this.frameSize = this.findOptimalSize(width, height, this.relationArray.length, frameSize, minimumFrameSize);
+
+        // Calcola quanti frame disegnare in ogni riga "piena"
+        var framesPerRow = Math.floor((width + this.spaceBetweenFrames) / (this.frameSize + this.spaceBetweenFrames));
+
+        // Posizione del primo frame: nell'angolo in alto a sx
+        var initialFramePositionX = x - width/2 + this.frameSize/2;
+        var initialFramePositionY = y - height/2 + this.frameSize/2;
+        var framePositionX = initialFramePositionX;
+        var framePositionY = initialFramePositionY;
+
+
+
+        for (var i = 0; i < this.relationArray.length; i++) {
+
+            // Ridimensiona il frame
+            this.relationArray[i].resizeFrame(this.frameSize);
+
+            // Riposizionalo
+            this.relationArray[i].setPosition(framePositionX, framePositionY);
+
+
+            // Prepara posizione per il prossimo frame:
+
+            // Se il frame e' l'ultimo della riga, aumenta la Y e resetta la X
+            if ((i+1) % (framesPerRow) == 0) {
+                framePositionY += (this.frameSize + this.spaceBetweenFrames);
+                framePositionX = initialFramePositionX;
+            }
+            // Altrimenti aumenta solo la X
+            else {
+                framePositionX += this.frameSize + this.spaceBetweenFrames;
+            }
+        }      
+
+        this.highlighterThickness = VERY_THICK_LINE;
+
+
+        // Controlla se gli highlighter c'erano
+        if (this["highlighters"].length < 1) this.groupHighlighted = null;
+        if (this["highlightersSort"].length < 1) this.groupHighlightedSort = null;
+
+        // Elimina tutti gli highlighters
+        var highlighters = this["highlighters"];
+        for (var i = highlighters.length - 1; i >= 0; i--) {
+            highlighters[i].remove();
+        }
+        this["highlighters"] = [];
+
+        highlighters = this["highlightersSort"];
+        for (var i = highlighters.length - 1; i >= 0; i--) {
+            highlighters[i].remove();
+        }
+        this["highlightersSort"] = [];
+
+
+        // Ri disegna gli highlighers        
+        if (this.groupHighlighted != null && this.groupHighlighted != this.groupHighlightedSort) {
+            
+            this.highlightGroup(this.groupHighlighted, "highlighters");
+            
+            if (this.groupHighlightedSort != null) {
+                var highlighters = this["highlighters"];
+                for (var i = 0; i < highlighters.length; i++) {
+                    highlighters[i].stroke = "#c0c0c0"
+                }
+            }
+            
+        }
+
+        if (this.groupHighlightedSort != null) {
+            this.highlightGroup(this.groupHighlightedSort, "highlightersSort")
+        }
+    
+
     }
 }

@@ -12,6 +12,7 @@ class Frame {
 
         this.elements = [];
         this.max_elements = max_elements
+        this.initialSize = size;
         this.size = size;
         this.color = color;
 
@@ -108,7 +109,7 @@ class Frame {
         if (this.sorted && this.texture.loaded)
             this.rect_content.fill = this.texture
         else
-            this.rect_content.fill = color;     // DA CONTROLLARE
+            this.rect_content.fill = color;
 
     }
 
@@ -271,6 +272,50 @@ class Frame {
             }
         }
         return [min, indx]
+    }
+
+
+    realSize() {
+        return this.size * this.group.scale;
+    }
+    
+
+    // Per il redraw quando cambia la misura della finestra
+    resizeFrame(newSize) {
+        var scaleFactor = newSize / this.initialSize;
+
+        this.group.scale = scaleFactor;
+
+        //this.size = newSize;
+
+        /*
+        this.textStyle = fontStyleSmallBlackCentered;
+        this.textStyle.weight = 450;
+        this.textStyle.size = this.size / 6.8;
+
+
+        this.rect.remove();
+        this.rect = two.makeRectangle(0, 0, this.size, this.size);
+        this.rect.opacity = 0.75;
+        this.rect.linewidth = this.linewidth
+
+        this.rect_content.remove();
+        this.rect_content = two.makeRectangle(0, -(this.size - this.linewidth)/2, this.size - this.linewidth, 0);
+        this.rect_content.fill = this.color
+        this.rect_content.noStroke()
+
+        if (this.sorted) {
+            //this.texture.remove();
+            this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.2)', this.size / 40, this.size / 12);
+            this.rect_content.fill = this.texture;
+        }
+
+        /*
+        this.rect_search = two.makeRectangle(0, -(size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2, size - this.linewidth, (this.size - 5) / this.max_elements)
+        this.rect_search.fill = "rgba(0, 0, 0, 0.5)"
+        this.rect_search.noStroke()
+        this.rect_search.visible = false
+        */
     }
 }
   

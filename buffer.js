@@ -42,10 +42,10 @@ class Buffer {
         // Aggiungi scritta "output frame"
         var textStyle = fontStyleSmallBlackCentered;
         textStyle.weight = 600;
-        var txt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
+        this.outputFrameTxt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
         
         this.group.add(this.outputFrame.group)
-        this.group.add(txt)
+        this.group.add(this.outputFrameTxt)
 
         two.add(this.group)
     }
@@ -305,7 +305,7 @@ class Buffer {
         var res = {
             x: this.outputFrame.x,
             y: this.outputFrame.y,
-            size: this.outputFrame.size,
+            size: this.outputFrame.realSize(),
             color: this.outputFrame.color,
             elements: this.outputFrame.getValues(),
             sorted: this.outputFrame.sorted
@@ -324,5 +324,43 @@ class Buffer {
             }
         }
         return res;
+    }
+
+
+
+    // Da chiamare quando cambia la dimensione della finestra
+    redrawBuffer(x, y) {
+
+        var spaceOutputFrame = 6;
+        var totalWidth = this.frames.length*frameSize + (this.frames.length - 1 + spaceOutputFrame)*SPACE_BETWEEN_FRAMES;
+        var framePosition = x - totalWidth/2 + frameSize/2;
+
+        // Ridimensiona e riposiziona i frame
+        for (var i = 0; i < this.frames.length; i++) {
+            /*
+            var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
+            newFrame.setView(1);
+            this.frames.push(newFrame);
+            this.group.add(newFrame.group);
+            */
+
+            this.frames[i].resizeFrame(frameSize);
+            this.frames[i].setPosition(framePosition, y);
+            framePosition += frameSize + this.spaceBetween;
+        }
+
+        // Ridimensiona output frame
+        this.outputFrame.resizeFrame(frameSize);
+
+        // Riposiziona output frame
+        framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
+        this.outputFrame.setPosition(framePosition, y);
+
+        // Leva e ri-aggiungi scritta "output frame"
+        this.outputFrameTxt.remove();
+        var textStyle = fontStyleSmallBlackCentered;
+        textStyle.weight = 600;
+        this.outputFrameTxt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
+                
     }
 }

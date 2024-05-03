@@ -28,6 +28,7 @@ var playOneStepButton = null;
 var playButton = null;
 var pauseButton = null;
 var playJumpButton = null;
+var undoButton = null;
 
 var automaticPlay = true;
 var paused = true;
@@ -40,9 +41,18 @@ var two;
 var textBox = null;     // Casella a sx in cui appaiono messaggi
 var showingRelationContent = true; 
 
-// Ogetti di TWO
-var bufferFramesText = null
-var relationFramesText = null
+// Per fare il redraw quando cambi la dimensione della finestra
+var mustRedraw = false;
+var lastResizeTime = null;
+const timeIntervalForRedraw = 100; // ri-disegna solo se e' passato un secondo dall'ultimo resize
+
+var leftColumn, centerColumn, upperPart, lowerPart;
+
+// Elementi di cui fare redraw:
+var bufferText = null;
+var bufferFramesText = null;
+var relationText = null;
+var relationFramesText = null;
 
 // Misure dello schermo
 var windowW = window.innerWidth;
@@ -53,16 +63,16 @@ var centerY = windowH / 2;
 // Costanti
 const MAX_ELEMENTS_PER_FRAME = 5;
 
-const MEDIUM_LINE = windowW/550;
-const THICK_LINE = windowW/400;
-const VERY_THICK_LINE = windowW/320;
+var MEDIUM_LINE = windowW/550;
+var THICK_LINE = windowW/400;
+var VERY_THICK_LINE = windowW/320;
 
-const frameSize = windowW/15;
-const SPACE_BETWEEN_FRAMES = windowW/200;
+var frameSize = windowW/15;
+var SPACE_BETWEEN_FRAMES = windowW/200;
 
-const fontSizeBig = windowW/60;
-const fontSizeMedium = windowW/80;
-const fontSizeSmall = windowW/100;
+var fontSizeBig = windowW/60;
+var fontSizeMedium = windowW/80;
+var fontSizeSmall = windowW/100;
 
 // Valori I/O
 var nRead = 0
@@ -103,8 +113,13 @@ const fontStyleSmallBlackCentered = {
 var newColor
 
 
-// Lunghezza animazioni
-var animTime = 1000
+// Lunghezza animazioni e pausa callback
+const animTimeMin = 500;
+const animTimeMax = 1000;
+var animTime = animTimeMax;
+const waitingTimeMin = 250;
+const waitingTimeMax = 500;
+var waitingTime = waitingTimeMax;
 
 
 // Crea la una texture con delle righe
@@ -153,7 +168,7 @@ function onBodyLoad() {
     document.menu_form.reset();
     document.getElementById("show_relation_content").checked = true;
 
-    // Handler slider
+    // Slider menu iniziale
     document.getElementById("buffer_size").onchange = function(event) {
         bufferSize = event.target.value;
         document.getElementById("buffer_size_value").innerHTML = bufferSize;
@@ -163,13 +178,36 @@ function onBodyLoad() {
         document.getElementById("relation_size_value").innerHTML = relationSize;
     };
 
+    // Casella di testo
     textBox = document.getElementById("text_box"); 
     
+    // Pulsanti controllo animazione
     playOneStepButton = document.getElementById("step_button"); 
     playButton = document.getElementById("play_button");
     pauseButton = document.getElementById("pause_button");
     playJumpButton = document.getElementById("jump_button");
     pauseButton.disabled = true;    // parte disattivato
+    undoButton = document.getElementById("undo_button");
+    undoButton.disabled = true;    // parte disattivato
+
+    // Pulsanti velocita' animazione
+    var animFasterButton = document.getElementById("anim_faster");
+    var animSlowerButton = document.getElementById("anim_slower");
+    animSlowerButton.disabled = true;
+    animFasterButton.onclick = function() {
+        console.log("faster");
+        animTime = animTimeMin;
+        waitingTime = waitingTimeMin;
+        animFasterButton.disabled = true;
+        animSlowerButton.disabled = false;
+    }
+    animSlowerButton.onclick = function() {
+        console.log("slower");
+        animTime = animTimeMax;
+        waitingTime = waitingTimeMax;
+        animFasterButton.disabled = false;
+        animSlowerButton.disabled = true;
+    }
 }
 
 
@@ -198,19 +236,17 @@ function startSimulation() {
     document.getElementById("start_simulation").onclick = () => {reset(); closeMenu()};
     */
 
-    // Mostra il div simulation
-    //var simulation = document.getElementById("simulation");
+    // Mostra il div centrale
     document.getElementById("column_center").removeAttribute("hidden");
     document.getElementById("restart_button").removeAttribute("hidden");
 
     // Aggiungi controlli da tastiera (va fatto ora se no uno poteva premere la barra spaziatrice prima di avviare la simulazione)
     document.onkeydown = function(e) {
         switch (e.key) {
-            /*
             case "ArrowLeft":     
+                // TODO: fare undo
                 e.preventDefault();       
                 break;
-            */
             case "ArrowRight":
                 e.preventDefault();
                 playOne(0);
@@ -242,10 +278,8 @@ function startSimulation() {
         }
     };
 
-    var leftColumn = new Section(document.getElementById("column_sx"));
-    var centerColumn = new Section(document.getElementById("column_center"));
-    var upperPart = new Section(document.getElementById("column_center_upper_part"));
-    var lowerPart = new Section(document.getElementById("column_center_lower_part"));
+    // AGGIORNA MISURE (e CREA SEZIONI - lo fa dentro la funzione)
+    updateSizes();
     
     // Avvia Two
     two = new Two({
@@ -260,25 +294,17 @@ function startSimulation() {
 
     // questo non funziona:
     window.onresize = function() {
-        centerX = window.innerWidth / 2;
-        centerY = window.innerHeight / 2;
-        //two.renderer.setSize(window.innerWidth, window.innerHeight);
-        //two.scene.translation.set(two.width / 2, two.height / 2);
-        two.scene.translation.set(0, 0);
-        two.update();
+        mustRedraw = true;
+        lastResizeTime = Date.now();    // tempo attuale (precisione millisecondi)
     }
 
-    // Sfondo
-    //two.renderer.domElement.style.background = '#fcb215';
 
-    // Scritta "Buffer"   makeText(message, x, y, style)
-    two.makeText("BUFFER", upperPart.bottomLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.25*upperPart.height, fontStyleMediumBlack); 
-    // Scritta con la dimensione del buffer
+    // Scritta "Buffer" e dimensione buffer
+    bufferText = two.makeText("BUFFER", upperPart.bottomLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.25*upperPart.height, fontStyleMediumBlack);
     bufferFramesText = two.makeText("M = " + bufferSize, upperPart.topLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.15*upperPart.height, fontStyleMediumGray); 
     
-    // Scritta "Relation"
-    two.makeText("RELATION", lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.15*upperPart.height, fontStyleMediumBlack); 
-    // Scritta con la dimensione della relazione
+    // Scritta "Relation" e dimensione relazione
+    relationText = two.makeText("RELATION", lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.15*upperPart.height, fontStyleMediumBlack); 
     relationFramesText = two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
     
     // CREA BUFFER         constructor(x, y, length, frameSize, two)
@@ -336,6 +362,12 @@ function playOne(time = animTime) {
     // disattiva pulsante pausa
     pauseButton.disabled = true;
 
+    // attiva pulsanti play e back
+    playButton.disabled = false;
+    playOneStepButton.disabled = false;
+    playJumpButton.disabled = false;
+    undoButton.disabled = false;
+
     play(time);
 }
 
@@ -350,6 +382,7 @@ function playAll() {
     playOneStepButton.disabled = true;
     playJumpButton.disabled = true;
     playButton.disabled = true;
+    undoButton.disabled = true;
 
     // attiva pulsante pausa
     pauseButton.disabled = false;
@@ -364,12 +397,11 @@ function pause() {
     // disattiva pulsante pausa
     pauseButton.disabled = true;
 
-    // attiva pulsante play one
-    playOneStepButton.disabled = false;
-    playJumpButton.disabled = false
-
-    // attiva pulsante play
+    // attiva pulsanti play e back
     playButton.disabled = false;
+    playOneStepButton.disabled = false;
+    playJumpButton.disabled = false;
+    undoButton.disabled = false;
 
     // metti in pausa
     paused = true;
@@ -516,6 +548,7 @@ function play(time = animTime) {
                 if (next_sibling == null) {
                     console.log("current group has no siblings left");
                     relation.setCurrentGroup(currentGroup.parent);
+                    relation.highlightGroup(null, "highlightersSort");
                     applicationState = States.GroupToMerge;
                     if (!automaticPlay) showMessage(Messages.childrenMustBeMergeSorted);
                 }
@@ -701,6 +734,7 @@ function play(time = animTime) {
 
         case States.Finish:
             playing = false;
+            undoButton.disabled = false;
             break;
 
         default:
@@ -718,7 +752,7 @@ async function callback() {
             playButton.disabled = false;
         }
         else {
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, waitingTime));
             play(animTime);
         }
     }
@@ -734,12 +768,81 @@ async function callback() {
 
 // ANIMAZIONI
 function animate() {
+
+    // PER IL REDRAW
+    if (mustRedraw && !playing) {
+        if (Date.now() - lastResizeTime > timeIntervalForRedraw) {
+            mustRedraw = false;
+            // ri-disegna tutto
+            console.log("redrawing");
+            redrawEverything();
+        }
+    }
+
     TWEEN.update();
     //two.update();
 	requestAnimationFrame(animate);
     //console.log(frame.rect_search.position.x)
 }
 requestAnimationFrame(animate)
+
+
+
+function redrawEverything() {
+
+    // Aggiorna misure
+    updateSizes();
+
+    // Rimuovi scritte
+    bufferText.remove();
+    bufferFramesText.remove();
+    relationText.remove();
+    relationFramesText.remove();
+
+    // Scritta "Buffer" e dimensione buffer
+    bufferText = two.makeText("BUFFER", upperPart.bottomLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.25*upperPart.height, fontStyleMediumBlack);
+    bufferFramesText = two.makeText("M = " + bufferSize, upperPart.topLeftCorner.x + 0.05*upperPart.width, upperPart.bottomLeftCorner.y - 0.15*upperPart.height, fontStyleMediumGray); 
+    
+    // Scritta "Relation" e dimensione relazione
+    relationText = two.makeText("RELATION", lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.15*upperPart.height, fontStyleMediumBlack); 
+    relationFramesText = two.makeText("B(R) = " + relationSize, lowerPart.topLeftCorner.x + 0.05*lowerPart.width, lowerPart.topLeftCorner.y + 0.25*upperPart.height, fontStyleMediumGray); 
+
+    // Ri disegna buffer
+    buffer.redrawBuffer(upperPart.center.x, upperPart.center.y - 15);
+
+    // Ri disegna la relazione
+    relation.redrawRelation(lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, 15);
+}
+
+
+function updateSizes() {
+    windowW = window.innerWidth;
+    windowH = window.innerHeight;
+    centerX = windowW / 2;
+    centerY = windowH / 2;
+
+    MEDIUM_LINE = windowW/550;
+    THICK_LINE = windowW/400;
+    VERY_THICK_LINE = windowW/320;
+
+    frameSize = windowW/15;
+    SPACE_BETWEEN_FRAMES = windowW/200;
+
+    fontSizeBig = windowW/60;
+    fontSizeMedium = windowW/80;
+    fontSizeSmall = windowW/100;
+    
+    fontStyleMediumBlack.size = fontSizeMedium;
+    fontStyleMediumGray.size = fontSizeMedium;
+    fontStyleSmallBlack.size = fontSizeSmall;
+    fontStyleSmallBlackCentered.size = fontSizeSmall;
+    
+    // Aggiorna sezioni
+    leftColumn = new Section(document.getElementById("column_sx"));
+    centerColumn = new Section(document.getElementById("column_center"));
+    upperPart = new Section(document.getElementById("column_center_upper_part"));
+    lowerPart = new Section(document.getElementById("column_center_lower_part"));
+}
 
 
 
