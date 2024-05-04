@@ -44,15 +44,9 @@ var showingRelationContent = true;
 // Per fare il redraw quando cambi la dimensione della finestra
 var mustRedraw = false;
 var lastResizeTime = null;
-const timeIntervalForRedraw = 100; // ri-disegna solo se e' passato un secondo dall'ultimo resize
+const timeIntervalForRedraw = 100; // ri-disegna solo se e' passato un po' dall'ultimo resize
 
 var leftColumn, centerColumn, upperPart, lowerPart;
-
-// Elementi di cui fare redraw:
-var bufferText = null;
-var bufferFramesText = null;
-var relationText = null;
-var relationFramesText = null;
 
 // Misure dello schermo
 var windowW = window.innerWidth;
@@ -114,12 +108,19 @@ var newColor
 
 
 // Lunghezza animazioni e pausa callback
-const animTimeMin = 500;
-const animTimeMax = 1000;
-var animTime = animTimeMax;
-const waitingTimeMin = 250;
-const waitingTimeMax = 500;
-var waitingTime = waitingTimeMax;
+const animTimeVeryFast = 300;
+const animTimeFast = 500;
+const animTimeSlow = 900;
+const animTimeVerySlow = 1150;
+var animTime = animTimeSlow;
+const waitingTimeVeryFast = 150;
+const waitingTimeFast = 250;
+const waitingTimeSlow = 500;
+const waitingTimeVerySlow = 600;
+var waitingTime = waitingTimeSlow;
+const Speeds = {VeryFast:0, Fast:1, Slow:2, VerySlow:3};
+var currentSpeed = Speeds.Slow;
+var makeSpeedFaster, makeSpeedSlower;   // funzioni definite sotto
 
 
 // Crea la una texture con delle righe
@@ -193,21 +194,60 @@ function onBodyLoad() {
     // Pulsanti velocita' animazione
     var animFasterButton = document.getElementById("anim_faster");
     var animSlowerButton = document.getElementById("anim_slower");
-    animSlowerButton.disabled = true;
-    animFasterButton.onclick = function() {
-        console.log("faster");
-        animTime = animTimeMin;
-        waitingTime = waitingTimeMin;
-        animFasterButton.disabled = true;
+    
+    // handler pulsante faster
+    makeSpeedFaster = function () {
+        switch (currentSpeed) {
+            case Speeds.VeryFast:
+                break;
+            case Speeds.Fast:
+                animTime = animTimeVeryFast;
+                waitingTime = waitingTimeVeryFast;
+                currentSpeed = Speeds.VeryFast;
+                animFasterButton.disabled = true;   // disabilita perche' non puoi andare piu' veloce di cosi'
+                break;
+            case Speeds.Slow:
+                animTime = animTimeFast;
+                waitingTime = waitingTimeFast;
+                currentSpeed = Speeds.Fast;
+                break;
+            case Speeds.VerySlow:
+                animTime = animTimeSlow;
+                waitingTime = waitingTimeSlow;
+                currentSpeed = Speeds.Slow;
+                break;
+            default: break;
+        }
         animSlowerButton.disabled = false;
     }
-    animSlowerButton.onclick = function() {
-        console.log("slower");
-        animTime = animTimeMax;
-        waitingTime = waitingTimeMax;
+    animFasterButton.onclick = makeSpeedFaster;
+
+    // handler pulsante slower
+    makeSpeedSlower = function () {
+        switch (currentSpeed) {
+            case Speeds.VeryFast:
+                animTime = animTimeFast;
+                waitingTime = waitingTimeFast;
+                currentSpeed = Speeds.Fast;
+                break;
+            case Speeds.Fast:
+                animTime = animTimeSlow;
+                waitingTime = waitingTimeSlow;
+                currentSpeed = Speeds.Slow;
+                break;
+            case Speeds.Slow:
+                animTime = animTimeVerySlow;
+                waitingTime = waitingTimeVerySlow;
+                currentSpeed = Speeds.VerySlow;
+                animSlowerButton.disabled = true;   // disabilita perche' non puoi andare piu' lento di cosi'
+                break;
+            case Speeds.VerySlow:
+                break;
+            default: break;
+        }
         animFasterButton.disabled = false;
-        animSlowerButton.disabled = true;
     }
+    animSlowerButton.onclick = makeSpeedSlower;
 }
 
 
@@ -243,15 +283,17 @@ function startSimulation() {
     // Aggiungi controlli da tastiera (va fatto ora se no uno poteva premere la barra spaziatrice prima di avviare la simulazione)
     document.onkeydown = function(e) {
         switch (e.key) {
+            // FRECCETTA SX: undo
             case "ArrowLeft":     
                 // TODO: fare undo
                 e.preventDefault();       
                 break;
+            // FRECCETTA DX: jump
             case "ArrowRight":
                 e.preventDefault();
                 playOne(0);
                 break;
-
+            // SPAZIO: play/pause
             case " ":
                 e.preventDefault();
                 if (paused || !automaticPlay)
@@ -259,10 +301,20 @@ function startSimulation() {
                 else
                     pause();
                 break;
-
+            // INVIO: play one
             case "Enter":
                 e.preventDefault();
                 playOne();
+                break;
+            // TASTO +: aumenta velocita'
+            case "+":
+                e.preventDefault();
+                makeSpeedFaster();
+                break;
+            // TASTO -: diminuisci velocita'
+            case "-":
+                e.preventDefault();
+                makeSpeedSlower();
                 break;
 
             default: break;
@@ -331,8 +383,8 @@ function reset() {
     playJumpButton.disabled = false;
     applicationState = States.Start; 
 
-    var upperPart = new Section(document.getElementById("column_center_upper_part"));
-    var lowerPart = new Section(document.getElementById("column_center_lower_part"));
+    upperPart = new Section(document.getElementById("column_center_upper_part"));
+    lowerPart = new Section(document.getElementById("column_center_lower_part"));
     buffer.group.remove();
     relation.group.remove();    
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
