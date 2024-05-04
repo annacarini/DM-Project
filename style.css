@@ -31,8 +31,6 @@
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    /*-webkit-transition: .4s;
-    transition: .4s;*/
 }
 
 .slider:before {
@@ -43,8 +41,6 @@
     left: 0.208vw;
     bottom: 0.370vh;
     background-color: white;
-    /*-webkit-transition: .4s;
-    transition: .4s;*/
 }
 .slider:after {
     position: absolute;
@@ -465,19 +461,6 @@ body{
         transform: translateY(0) rotate(720deg);
         opacity: 0;
     }
-
-    /*
-    0%{
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-        border-radius: 0;
-    }
-
-    100%{
-        transform: translateY(-1000px) rotate(720deg);
-        opacity: 0;
-    }
-    */
 
 }
 

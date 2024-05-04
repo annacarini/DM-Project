@@ -49,18 +49,6 @@ class Relation {
         var framePositionY = initialFramePositionY;
         
 
-        /* // Questo e' per centrare verticalmente la relazione
-        // Calcola quanto spazio occupano le righe
-        var rowsUsed = Math.ceil(relationSize/framesPerRow);
-        var rowsTotalSpace = (rowsUsed - 1) * (this.frameSize + this.spaceBetweenFrames) + this.frameSize;
-
-        // Posizione del primo frame: nell'angolo in alto a sx
-        var initialFramePositionX = x - width/2 + this.frameSize/2;
-        var initialFramePositionY = y - rowsTotalSpace/2 + this.frameSize/2;
-        var framePositionX = initialFramePositionX;
-        var framePositionY = initialFramePositionY;
-        */
-
         for (var i = 0; i < relationSize; i++) {
 
             // Genera valori da inserire nel frame
@@ -102,8 +90,7 @@ class Relation {
     }
 
 
-    // RICORSIVA, non e' la soluzione ideale ma per ora funziona.
-    // Tenta di inserire i frame della misura corrente, se non c'entrano riduce la misura di 5px e ri-tenta
+    // Tenta di inserire i frame della misura corrente, se non c'entrano riduce la misura di 10px e ri-tenta
     findOptimalSize(width, height, relationSize, frameSize, minimumFrameSize) {
         
         //console.log("Testing frame size: " + frameSize);
@@ -378,22 +365,6 @@ class Relation {
     }
     
 
-    /*
-    // Unisce tutti i figli del gruppo attuale, mettendo i loro frame come "value" del gruppo attuale. Poi elimina i figli
-    mergeChildren() {
-
-        // Metti availableFrames come "value" del nodo attuale
-        this.currentGroup.value = this.availableFrames;
-
-        // Elimina i figli
-        this.currentGroup.children = [];
-
-        // Assegna il colore dell'ultimo frame a tutti i frame della lista (l'ultimo perche' cosi' e' sicuramente diverso da quello del gruppo dopo)
-        var color = this.availableFrames[this.availableFrames.length - 1].color;
-        this.changeGroupColor(this.currentGroup, color);
-    }
-    */
-
 
     // Serve per ordinare i frame in base alla loro posizione
     compareFramesByPosition( frame1, frame2 ) {
@@ -427,10 +398,6 @@ class Relation {
 
 
     static differenceBetweenColors(color1, color2) {
-        //return Math.abs(color1[0] - color2[0]) + Math.abs(color1[1] - color2[1]) + Math.abs(color1[2] - color2[2]);
-        //return Math.max(Math.abs(color1[0] - color2[0]), Math.abs(color1[1] - color2[1]), Math.abs(color1[2] - color2[2]));
-        //return Math.abs(color1[0] - color2[0]);     // consideriamo solo la HUE
-
         // Dai piu' importanza alla hue, ma considera anche la luminosita'
         return Math.abs(color1[0] - color2[0]) + 0.08 * Math.abs(color1[2] - color2[2]);
     }
@@ -675,9 +642,6 @@ class Relation {
 
                 // metti il frame vuoto dentro availableFrames cosi' sai che puoi scriverci dentro
                 this.availableFrames.push(child.value[i]);
-
-                // shifta tutto
-                //this.shiftFramesByOne(child.value[i]);
 
                 break;
             }

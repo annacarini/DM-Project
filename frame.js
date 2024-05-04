@@ -52,12 +52,6 @@ class Frame {
             this._yPosition.push(offset * (i - (this.max_elements - 1)/2))
         }
 
-
-        // PROVA CLICK HANDLER (funziona!), nota: bisogna per forza fare two.update() prima di assegnare l'event listener, se no non funziona!!
-        two.update();
-        this.group._renderer.elem.addEventListener('click', () => {
-            console.log("Content: " + this.elements);   // quando clicchi ti stampa nella console gli elementi di questo frame
-        }, false);
     }
 
 
@@ -102,8 +96,7 @@ class Frame {
 
     setColor(color) {
         //cambiare colore
-        this.color = color;                 // serve per far funzionare la funzione "mergeSiblings" di relation
-        //this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.1)', this.size / 40, this.size / 12)
+        this.color = color;
         this.texture = createCustomTexture(this.size, this.size, this.color, Relation.getDarkerColor(this.color), this.size / 40, this.size / 12)
         this.rect_content.opacity = 1;
         if (this.sorted && this.texture.loaded)
@@ -283,39 +276,7 @@ class Frame {
     // Per il redraw quando cambia la misura della finestra
     resizeFrame(newSize) {
         var scaleFactor = newSize / this.initialSize;
-
         this.group.scale = scaleFactor;
-
-        //this.size = newSize;
-
-        /*
-        this.textStyle = fontStyleSmallBlackCentered;
-        this.textStyle.weight = 450;
-        this.textStyle.size = this.size / 6.8;
-
-
-        this.rect.remove();
-        this.rect = two.makeRectangle(0, 0, this.size, this.size);
-        this.rect.opacity = 0.75;
-        this.rect.linewidth = this.linewidth
-
-        this.rect_content.remove();
-        this.rect_content = two.makeRectangle(0, -(this.size - this.linewidth)/2, this.size - this.linewidth, 0);
-        this.rect_content.fill = this.color
-        this.rect_content.noStroke()
-
-        if (this.sorted) {
-            //this.texture.remove();
-            this.texture = createCustomTexture(this.size, this.size, this.color, 'rgba(0, 0, 0, 0.2)', this.size / 40, this.size / 12);
-            this.rect_content.fill = this.texture;
-        }
-
-        /*
-        this.rect_search = two.makeRectangle(0, -(size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2, size - this.linewidth, (this.size - 5) / this.max_elements)
-        this.rect_search.fill = "rgba(0, 0, 0, 0.5)"
-        this.rect_search.noStroke()
-        this.rect_search.visible = false
-        */
     }
 }
   

@@ -282,25 +282,7 @@ class Buffer {
     }
 
 
-    // TEMPORANEA per testare se la scrittura dal buffer alla relazione funziona.
-    // semplicemente ogni volta che la chiami copia il contenuto del primo frame pieno
-    // che trova dentro l'output frame
-    fakeSort(callback=null) {
-
-        // Prendi la prima pagina vuota che trovi e copiala nell'output frame
-        for (var i = 0; i < this.frames.length; i++) {
-            if (this.frames[i].elements.length > 0) {
-                this.outputFrame.fill(this.frames[i].getValues());
-                this.frames[i].resetFrame();
-                break;
-            }
-        }
-
-        if (callback != null) callback();
-    }
-
-
-    // TEMPORANEA: restituisce il contenuto dell'output frame e lo svuota
+    // Restituisce il contenuto dell'output frame e lo svuota
     flushOutputFrame() {
         var res = {
             x: this.outputFrame.x,
@@ -314,7 +296,7 @@ class Buffer {
         return res;
     }
 
-    // TEMPORANEA: ti restituisce true se c'e' qualcosa dentro il buffer (escluso output frame), false se e' tutto vuoto
+    // Restituisce true se c'e' qualcosa dentro il buffer (escluso output frame), false se e' tutto vuoto
     bufferContainsSomething() {
         var res = false;
         for (var i = 0; i < this.frames.length; i++) {

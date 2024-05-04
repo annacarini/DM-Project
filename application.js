@@ -69,8 +69,8 @@ var fontSizeMedium = windowW/80;
 var fontSizeSmall = windowW/100;
 
 // Valori I/O
-var nRead = 0
-var nWrite = 0
+var nRead = 0;
+var nWrite = 0;
 
 // Stili testo
 const fontStyleMediumBlack = {
@@ -104,7 +104,7 @@ const fontStyleSmallBlackCentered = {
 
 
 // Per gestire il cambio dei colori nella relation al merge
-var newColor
+var newColor;
 
 
 // Lunghezza animazioni e pausa callback
@@ -271,10 +271,6 @@ function startSimulation() {
     document.getElementById("resume").removeAttribute("hidden");
     document.getElementById("start_simulation").innerHTML = "Restart";
     document.getElementById("start_simulation").onclick = () => {reset(); closeMenu()};
-    /*
-    document.getElementById("start_simulation").setAttribute("value", "Restart");
-    document.getElementById("start_simulation").onclick = () => {reset(); closeMenu()};
-    */
 
     // Mostra il div centrale
     document.getElementById("column_center").removeAttribute("hidden");
@@ -337,9 +333,6 @@ function startSimulation() {
     two = new Two({
         type: Two.Types.svg,
         fullscreen: true,
-        //fitted: false,
-        //width: 0.8*windowW, //centerColumn.width,
-        //height: windowH, //centerColumn.height,
         autostart: true,
     }).appendTo(document.getElementById("column_center"));
 
@@ -563,12 +556,10 @@ function play(time = animTime) {
 
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
-                    //console.log("buffer still contains something");
                     applicationState = States.GroupInBuffer;
                     if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
-                    //console.log("buffer is empty");
                     applicationState = States.GroupSorted;
                     if (!automaticPlay) showMessage(Messages.currentGroupSorted);
                 }
@@ -759,12 +750,12 @@ function play(time = animTime) {
 
             // Imposta il suo colore pari al colore dell'ultimo figlio
             //frame.color = relation.getColorOfLastChild();
-            frame.color = newColor
+            frame.color = newColor;
 
             // Copia l'output frame nella relazione
             relation.writeWithAnimation(frame, frame.color, time, () => {
                 // Aggiorno il valore del numero di write
-                nWrite += 1
+                nWrite += 1;
                 document.getElementById('write-count').textContent = nWrite;
 
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
@@ -834,9 +825,7 @@ function animate() {
     }
 
     TWEEN.update();
-    //two.update();
 	requestAnimationFrame(animate);
-    //console.log(frame.rect_search.position.x)
 }
 requestAnimationFrame(animate)
 
