@@ -34,6 +34,8 @@ var automaticPlay = true;
 var paused = true;
 var playing = false;    // per evitare di chiamare di nuovo play() fino a che la callback non e' stata chiamata
 
+var simulationStopped = false;  // per bloccare le animazioni e i tasti quando apri il menu
+
 
 // PARAMETRI PER GRAFICA
 var two;
@@ -253,11 +255,14 @@ function onBodyLoad() {
 
 function openMenu() {
     pause();
+    simulationStopped = true;
     document.getElementById("menu").removeAttribute("hidden");
 }
 
 
 function closeMenu() {
+    simulationStopped = false;
+    //animate(); // riprendi l'animazione visto che l'avevi fermata
     document.getElementById("menu").setAttribute("hidden", null);
 }
 
@@ -278,6 +283,7 @@ function startSimulation() {
 
     // Aggiungi controlli da tastiera (va fatto ora se no uno poteva premere la barra spaziatrice prima di avviare la simulazione)
     document.onkeydown = function(e) {
+        if (simulationStopped) return;
         switch (e.key) {
             // FRECCETTA SX: undo
             case "ArrowLeft":     
@@ -376,8 +382,9 @@ function reset() {
     playJumpButton.disabled = false;
     applicationState = States.Start; 
 
-    upperPart = new Section(document.getElementById("column_center_upper_part"));
-    lowerPart = new Section(document.getElementById("column_center_lower_part"));
+    // aggiorna sezioni
+    updateSizes();
+
     buffer.group.remove();
     relation.group.remove();    
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
@@ -825,9 +832,10 @@ function animate() {
     }
 
     TWEEN.update();
-	requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate)
+
 
 
 
