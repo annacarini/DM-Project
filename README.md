@@ -4,6 +4,8 @@ This is a web application for visualizing the external multi-pass sorting algori
 
 It has been realized as a project for the Data Management course from the master's degree in Engineering in Computer Science at the university "La Sapienza" of Rome.
 
+[The application is available here.](https://annacarini.github.io/DM-Project/)
+
 ### Tools
 The application's graphics have been realized using the library [Two.js](https://two.js.org/), combined with the library [Tween.js](https://github.com/tweenjs/tween.js) to manage the animations.
 
