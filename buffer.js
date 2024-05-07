@@ -19,7 +19,7 @@ class Buffer {
         this._virtualFrames = Array(length, []);
         this._virtualOutputFrame = [];
         this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false);
-        this.frameToRefill = -1
+        this.framesToRefill = [];
 
         var spaceOutputFrame = 6;
         var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
@@ -120,11 +120,13 @@ class Buffer {
     // 2) Il frame non ha mai chiesto un refill -- oppure --
     //      l'ultima volta che il frame ha chiesto il refill è stato ricaricato
     checkToRefill() {
+        var toRefill = [];
+
         for (var i = 0; i < this.frames.length; i++) {
             if (!this.frames[i].getValues().length && this.frameRefilled[i])
-                return i
+                toRefill.push(i);
         }
-        return -1
+        return toRefill;
     }
 
 
@@ -258,21 +260,22 @@ class Buffer {
 
 
     sortAnimation(time = 200, sortCallback = () => {}, mergeCallback = () => {}, merge = false) {
-        this.sort(merge)
-        console.log("Prima del tween quando merge", merge)
+        this.sort(merge);
         var tween = new TWEEN.Tween(null).to(null, time).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
-                this.frameToRefill = this.checkToRefill();
-                console.log("Il frame da refillare: ", this.frameToRefill, " refilled: ", this.frameRefilled[this.frameToRefill])
-                if (merge && (this.frameToRefill != -1)) {
-                    this.frameRefilled[this.frameToRefill] = false;
+                this.framesToRefill = this.checkToRefill();
+                if (merge && (this.framesToRefill.length)) {
+                    for (var i = 0; i < this.framesToRefill.length; i++)
+                        this.frameRefilled[this.framesToRefill[i]] = false;
                     mergeCallback();
                 }
                 else
                     sortCallback();
             }
         )
-        tween.start()
+        tween.start();
+
+        return tween;
     }
 
 
@@ -319,13 +322,6 @@ class Buffer {
 
         // Ridimensiona e riposiziona i frame
         for (var i = 0; i < this.frames.length; i++) {
-            /*
-            var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
-            newFrame.setView(1);
-            this.frames.push(newFrame);
-            this.group.add(newFrame.group);
-            */
-
             this.frames[i].resizeFrame(frameSize);
             this.frames[i].setPosition(framePosition, y);
             framePosition += frameSize + this.spaceBetween;
@@ -344,5 +340,35 @@ class Buffer {
         textStyle.weight = 600;
         this.outputFrameTxt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
         this.group.add(this.outputFrameTxt);
+
+    }
+
+
+    /****************** UNDO *****************/
+    undoWriteOnBuffer() {
+        for (var i = 0; i < this.frames.length; i++) {
+            this.frames[i].resetFrame();
+            this.frameRefilled[i] = false;
+        }
+    }
+
+    undoSortAnimation(oldFramesValues) {
+        for (var i = 0; i < oldFramesValues.length - 1; i++) {
+            this.frames[i].resetFrame();
+            this.frames[i].fill(oldFramesValues[i]);
+        }
+        this.outputFrame.resetFrame();
+        this.outputFrame.fill(oldFramesValues[oldFramesValues.length - 1]);
+    }
+
+    undoFlushOutputFrame(oldValues) {
+        this.outputFrame.resetFrame();
+        this.outputFrame.fill(oldValues);
+    }
+
+
+    undoWriteOnBufferFrame(indx) {
+        this.frames[indx].resetFrame();
+        this.frameRefilled[indx] = false;
     }
 }
