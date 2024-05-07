@@ -294,8 +294,10 @@ function startSimulation() {
         switch (e.key) {
             // FRECCETTA SX: undo
             case "ArrowLeft":     
-                // TODO: fare undo
                 e.preventDefault();       
+                if (applicationState != States.Start) {
+                    undo();
+                }
                 break;
             // FRECCETTA DX: jump
             case "ArrowRight":
@@ -491,6 +493,10 @@ function undo() {
         showMessage(lastAction[2]);
         rollback.pop();
     }
+
+    if (applicationState == States.Start) {
+        undoButton.disabled = true;
+    }
 }
 
 
@@ -516,7 +522,10 @@ function play(time = animTime) {
                 }
             }
 
-            rollback.push([() => relation.undoHighlightGroup("highlighters"), States.Start, "Waiting to start"]);
+            rollback.push([() => {
+                relation.undoHighlightGroup("highlighters");
+                relation.highlightGroup(null, "highlightersSort");
+            }, States.Start, "Waiting to start"]);
 
             relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
                 applicationState = States.GroupToSort;
@@ -532,7 +541,11 @@ function play(time = animTime) {
             if (currentGroup.value.length > bufferSize - 1) {
                 var oldColor = currentGroup.value[0].color
                 relation.splitGroup(bufferSize - 1);
-                rollback.push([() => relation.undoSplitGroup(oldColor), States.GroupToSort, textBox.innerHTML])
+                rollback.push([() => {
+                    relation.undoSplitGroup(oldColor);
+                    //relation.highlightGroup(relation.groupHighlighted, "highlighters");
+                    //relation.highlightGroup(relation.groupHighlightedSort, "highlightersSort");
+                }, States.GroupToSort, textBox.innerHTML])
 
                 // Questo controllo e' per mostrare il messaggio giusto
                 if (!automaticPlay) {
@@ -644,7 +657,7 @@ function play(time = animTime) {
             // Controlla se questo gruppo e' la radice (significa che hai finito tutto)
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
-                rollback.push([() => relation.undoHighlightGroup("highlighters"), States.GroupSorted, textBox.innerHTML]);
+                rollback.push([() => relation.highlightGroup(currentGroup, "highlighters"), States.GroupSorted, textBox.innerHTML]);
                 applicationState = States.Finish;
                 relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
                 showMessage(Messages.finished);
@@ -657,12 +670,15 @@ function play(time = animTime) {
             }
             // Altrimenti vedi se ha un fratello
             else {
-                const oldGroup = relation.currentGroup
+                const oldGroup = relation.currentGroup;
                 var next_sibling = relation.getNextSibling();
                 // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
                 if (next_sibling == null) {
                     console.log("current group has no siblings left");
-                    rollback.push([() => relation.undoSetCurrentGroup(oldGroup, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
+                    rollback.push([() => {
+                        relation.undoSetCurrentGroup(oldGroup, buffer.length - 1);
+                        relation.highlightGroup(relation.groupHighlightedSort, "highlightersSort");
+                    }, States.GroupSorted, textBox.innerHTML]);
                     relation.setCurrentGroup(currentGroup.parent);
                     relation.highlightGroup(null, "highlightersSort");
                     applicationState = States.GroupToMerge;
@@ -963,6 +979,10 @@ function play(time = animTime) {
             playJumpButton.disabled = true;
             playButton.disabled = true;
             undoButton.disabled = false;
+            rollback.push([() => {
+                playJumpButton.disabled = false;
+                playButton.disabled = false;
+            }, States.Finish, textBox.innerHTML])
             break;
 
         default:
