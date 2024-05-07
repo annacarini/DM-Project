@@ -368,7 +368,7 @@ function startSimulation() {
 
 function reset() {
     console.log("Resettiamo!")
-    textBox.innerHTML = "";
+    textBox.innerHTML = "Waiting to start.";
     nRead = 0;
     nWrite = 0;
     document.getElementById('read-count').textContent = 0;
@@ -376,19 +376,27 @@ function reset() {
     automaticPlay = true;
     paused = true;
     playing = false;
+
+    // Attiva pulsanti play
     playOneStepButton.disabled = false;
     playButton.disabled = false;
-    pauseButton.disabled = true;
     playJumpButton.disabled = false;
+
+    // Disattiva pulsanti pausa e undo
+    pauseButton.disabled = true;
+    undoButton.disabled = true;
+
     applicationState = States.Start; 
 
-    // aggiorna sezioni
+    // Aggiorna sezioni
     updateSizes();
 
+    // Rimuovi buffer e relazione, crea quelli nuovi
     buffer.group.remove();
     relation.group.remove();    
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
+    
     // Imposta scritte misura buffer e relazione
     document.getElementById("buffer_size_text").innerHTML = "M = " + bufferSize;
     document.getElementById("relation_size_text").innerHTML = "B(R) = " + relationSize;
@@ -403,6 +411,8 @@ function showMessage(text) {
 
 
 function playOne(time = animTime) {
+    if (applicationState == States.Finish) return;
+
     // esci dalla pausa
     paused = false;
 
@@ -417,11 +427,13 @@ function playOne(time = animTime) {
     playOneStepButton.disabled = false;
     playJumpButton.disabled = false;
     undoButton.disabled = false;
-
+    
     play(time);
 }
 
 function playAll() {
+    if (applicationState == States.Finish) return;
+
     // esci dalla pausa
     paused = false;
 
@@ -444,17 +456,20 @@ function playAll() {
 }
 
 function pause() {
+
+    // metti in pausa
+    paused = true;
+
     // disattiva pulsante pausa
     pauseButton.disabled = true;
+
+    if (applicationState == States.Finish) return;
 
     // attiva pulsanti play e back
     playButton.disabled = false;
     playOneStepButton.disabled = false;
     playJumpButton.disabled = false;
     undoButton.disabled = false;
-
-    // metti in pausa
-    paused = true;
 }
 
 
@@ -798,22 +813,9 @@ function play(time = animTime) {
 
 async function callback() {
     playing = false;    // per dire che l'esecuzione attuale e' terminata
-    if (!paused) {
-        if (!automaticPlay) {
-            // attiva pulsante play
-            playButton.disabled = false;
-        }
-        else {
-            await new Promise(r => setTimeout(r, waitingTime));
-            play(animTime);
-        }
-    }
-    // per assicurarsi che i pulsanti non si sono incasinati nel frattempo?
-    else {
-        playButton.disabled = false;
-        playOneStepButton.disabled = false;
-        playJumpButton.disabled = false;
-        pauseButton.disabled = true;
+    if (!paused && automaticPlay) {
+        await new Promise(r => setTimeout(r, waitingTime));
+        play(animTime);
     }
 }
 
