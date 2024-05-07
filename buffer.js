@@ -353,12 +353,14 @@ class Buffer {
     }
 
     undoSortAnimation(oldFramesValues) {
+        console.log("UNDOING SORT ANIMATION");
         for (var i = 0; i < oldFramesValues.length - 1; i++) {
             this.frames[i].resetFrame();
-            this.frames[i].fill(oldFramesValues[i]);
+            this.frames[i].fill(oldFramesValues[i].values);
+            this.frames[i].setColor(oldFramesValues[i].color);
         }
         this.outputFrame.resetFrame();
-        this.outputFrame.fill(oldFramesValues[oldFramesValues.length - 1]);
+        this.outputFrame.fill(oldFramesValues[oldFramesValues.length - 1].values);
     }
 
     undoFlushOutputFrame(oldValues) {

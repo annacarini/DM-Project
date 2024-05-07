@@ -606,9 +606,16 @@ function play(time = animTime) {
 
         case States.GroupInBuffer:
             var oldFramesValues = [];
-            for (frame of buffer.frames)
-                oldFramesValues.push(frame.getValues());
-            oldFramesValues.push(buffer.outputFrame.getValues());
+            for (frame of buffer.frames) {
+                oldFramesValues.push({
+                    values: frame.getValues(),
+                    color: frame.color
+                });
+            }
+            oldFramesValues.push({
+                values: buffer.outputFrame.getValues(),
+                color: buffer.outputFrame.color
+            });
             rollback.push([() => buffer.undoSortAnimation(oldFramesValues), States.GroupInBuffer, textBox.innerHTML]);
 
             // Avvia il sort
@@ -815,9 +822,16 @@ function play(time = animTime) {
         case States.ChildrenInBuffer:
             var oldToRefill = buffer.frameRefilled;
             var oldFramesValues = [];
-            for (frame of buffer.frames)
-                oldFramesValues.push(frame.getValues());
-            oldFramesValues.push(buffer.outputFrame.getValues());
+            for (frame of buffer.frames) {
+                oldFramesValues.push({
+                    values: frame.getValues(),
+                    color: frame.color
+                });
+            }
+            oldFramesValues.push({
+                values: buffer.outputFrame.getValues(),
+                color: buffer.outputFrame.color
+            });
             rollback.push([() => {
                 buffer.framesToRefill = [];
                 buffer.undoSortAnimation(oldFramesValues);
