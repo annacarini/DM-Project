@@ -124,11 +124,8 @@ class Relation {
 
         this.highlightGroup(this.currentGroup, "highlightersSort");
 
-        for (var i = 0; i < this.highlighters.length; i++) {
-            console.log(this.highlighters[i])
-            this.highlighters[i].stroke = "#c0c0c0"
-        }
-
+        for (var i = 0; i < this.highlighters.length; i++)
+            this.highlighters[i].stroke = "#c0c0c0";
     }
 
 
@@ -163,6 +160,41 @@ class Relation {
             }
         }
         return null;
+    }
+
+
+    getChildIndx(child) {
+        console.log("IL CILD", child);
+        for (var i = 0; i < this.currentGroup.parent.children.length; i++) {
+            if (this.currentGroup.parent.children[i] == child) return i;
+        }
+        return -1;
+    }
+
+
+    getIndx(frame) {
+        for (var i = 0; i < this.relationArray.length; i++) {
+            if (frame == this.relationArray[i])
+                return i;
+        }
+        return -1;
+    }
+
+    getFreeAvailableFrame() {
+        for (var i = 0; i < this.availableFrames.length; i++) {
+            if (this.availableFrames[i].elements.length < 1)
+                return i;
+        }
+        return -1;
+    }
+
+
+    getAvailableFrameIndx(frame) {
+        for (var i = 0; i < this.availableFrames.length; i++) {
+            if (this.availableFrames[i] == frame)
+                return i;
+        }
+        return -1;
     }
 
 
@@ -360,8 +392,8 @@ class Relation {
         this.currentGroup.children = [];
 
         // Assegna il colore dell'ultimo frame a tutti i frame della lista (l'ultimo perche' cosi' e' sicuramente diverso da quello del gruppo dopo)
-        var color = frames[frames.length - 1].color;
-        this.changeGroupColor(this.currentGroup, color);
+        //var color = frames[frames.length - 1].color;
+        //this.changeGroupColor(this.currentGroup, color);
     }
     
 
@@ -529,7 +561,7 @@ class Relation {
         var newColor = Relation.randomColor();
         while (i < 10) {
             var differents = 0;
-            console.log("Stiamo dentro il ciclo while!", i)
+            //console.log("Stiamo dentro il ciclo while!", i)
             for (var color of colors) {
                 if (Relation.differenceBetweenColors(color, newColor) > 60)
                     differents += 1
@@ -668,7 +700,8 @@ class Relation {
 
 
     writeWithAnimation(frame, newColor, time = 1000, callback=null) {
-        var res = false;
+        //var res = false;
+        var res = null;
         for (let i = 0; i < this.availableFrames.length; i++) {
             if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
 
@@ -681,7 +714,7 @@ class Relation {
                 var end_x = this.availableFrames[i].x;
                 var end_y = this.availableFrames[i].y;
                 var end_size = this.availableFrames[i].realSize();
-                animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, time, () => {
+                var tween = animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, time, () => {
                     // scrivi gli elementi
                     this.availableFrames[i].fill(frame.elements);
                     // cambia il colore (serve farlo a prescindere per reimpostare l'opacita' ad 1)
@@ -695,7 +728,8 @@ class Relation {
                     if (callback != null) callback();
                 });
 
-                res = true;
+                //res = true;
+                res = tween;
                 break;
             }
         }
@@ -770,6 +804,10 @@ class Relation {
         this.relationArray[j] = frame_i;
     }
 
+
+
+
+    /************************ per il REDRAW ************************/
 
 
     // Da chiamare quando cambia la dimensione della finestra
@@ -852,5 +890,247 @@ class Relation {
         }
     
 
+    }
+
+
+    
+    /************************ per l'UNDO ************************/
+
+
+    _equalCurrentGroup(group1, group2) {
+        const keys1 = Object.keys(group1);
+        const keys2 = Object.keys(group2);
+    }
+
+    // Sono qui definite le funzioni di undo
+
+    undoHighlightGroup(nameHighl) {
+
+        console.log("UNDO HIGHLIGHT GROUP");
+
+        var highlighters = this[nameHighl]
+        for (var i = highlighters.length - 1; i >= 0; i--) {
+            highlighters[i].remove();
+        }
+        highlighters = [];
+    }
+
+    undoSplitGroup(color) {
+
+        console.log("UNDO SPLIT GROUP")
+
+        // Prendi tutti i figli
+        var children = this.currentGroup.parent.children;
+
+        // Unisci tutti i frame di tutti i children e riportali al colore originale
+        var frames = [];
+        for (let i = 0; i < children.length; i++) {
+            for (let j = 0; j < children[i].value.length; j++)
+                children[i].value[j].setColor(color);
+            frames = frames.concat(children[i].value);
+        }
+        
+        // Ri-ordina i frame rispetto alla y e rispetto alla x, in modo da averli nello stesso
+        // ordine in cui appaiono graficamente (perche' la funzione shiftFramesByOne incasina
+        // tutto, ma servono ordinati per disegnare l'highlighter bene)
+        frames.sort( this.compareFramesByPosition );
+
+        console.log("valore", this.currentGroup.parent.children[0]);
+        console.log("children:", this.currentGroup.parent.children[0].children == this.currentGroup.children);
+        console.log("parent:", this.currentGroup.parent.children[0].parent == this.currentGroup.parent);
+        console.log("value", this.currentGroup.parent.children[0].value == this.currentGroup.value);
+
+        for (var i = 0; i < this.currentGroup.parent.children[0].value.length; i++)
+            console.log(this.currentGroup.parent.children[0].value[i] == this.currentGroup.value[i]);
+        console.log("La grandezza del currentGruop.children e del currentGroup.parent.childre: ", this.currentGroup.children.length, this.currentGroup.parent.children[0].children.length)
+        for (var i = 0; i < this.currentGroup.children.length; i++)
+            console.log(this.currentGroup.parent.children[0].children[i] == this.currentGroup.children[i]);
+        console.log("Il value", this.currentGroup.parent.children[0].value, this.currentGroup.value)
+
+        console.log("Il gruppo corrente: ", this.currentGroup.parent.children);
+        console.log(this.currentGroup);
+        console.log(this.currentGroup.parent.children[0] == this.currentGroup);
+        if (!this.currentGroup.children.length && this.currentGroup.parent.children[0] == this.currentGroup) {
+            var highlighters = this["highlightersSort"]
+            for (var i = highlighters.length - 1; i >= 0; i--) {
+                highlighters[i].remove();
+            }
+            this["highlightersSort"] = []
+        }
+
+        this.currentGroup = this.currentGroup.parent
+        // Metti questi frame come "value" del nodo attuale
+        this.currentGroup.value = frames;
+        
+        // Elimina i figli
+        this.currentGroup.children = [];
+
+        this.highlightGroup(this.currentGroup, "highlighters");
+    }
+
+    undoReadCurrentGroup(frames) {
+
+        console.log("UNDO READ CURRENT GROUP");
+
+        this.availableFrames = [];
+
+        for (let i = 0; i < this.currentGroup.value.length; i++) {
+            this.currentGroup.value[i].copy(frames[i]);
+        }
+    }
+
+    // Se ci sono degli availableFrames cerco il primo vuoto. Quello riempito per ultimo
+    // è quello prima.
+    // Se this.availableframes è vuoto significa che l'ultimo frame ad essere stato scritto è l'ultimo
+    // del gruppo. Quindi prendo i frames del gruppo e li metto dentro available frames e resetto l'ultimo
+    // frame.
+    undoWriteWithAnimation(indx, oldAvailableIndx = []) {
+        console.log("UNDO WRITE WITH ANIMATION");
+        
+        if (this.availableFrames.length) {
+            /*for (var i = 0; i < this.availableFrames.length; i++) {
+                if (this.availableFrames[i].elements.length == 0)
+                    break;
+            }
+            i -= 1;*/
+            this.availableFrames[indx].resetFrame();
+        }
+        else {
+            if (this.currentGroup.value.length) {
+                for (var i = 0; i < this.currentGroup.value.length; i++) {
+                    this.availableFrames.push(this.currentGroup.value[i]);
+                }
+            }
+            else {
+                for (var i = 0; i < oldAvailableIndx.length; i++) {
+                    while (this.availableFrames.length <= oldAvailableIndx[i][2]) {
+                        this.availableFrames.push(null);
+                    }
+                    this.availableFrames[oldAvailableIndx[i][2]] = this.currentGroup.children[oldAvailableIndx[i][0]].value[oldAvailableIndx[i][1]];
+                }
+            }
+            console.log(this.availableFrames[indx]);
+            this.availableFrames[indx].resetFrame();
+        }
+    }
+
+
+    // Se il vecchio gruppo aveva come parente il gruppo corrente significa che era un suo figlio.
+    // Se il numero di frame che aveva era uguale o inferiore a limit (il numero di frame nel buffer - 1)
+    // ciò significa che era nella fase di sorting e che quindi aveva il bordo grigio.
+    undoSetCurrentGroup(indx, limit) {
+
+        console.log("UNDO SET CURRENT GROUP");
+
+        if (indx == -1) {
+            var newGroup = this.currentGroup.children[this.currentGroup.children.length - 1];
+            var sum = 0;
+            for (var i = 0; i < this.currentGroup.children.length; i++)
+                sum += this.currentGroup.children[i].value.length;
+            if (sum <= limit * this.currentGroup.children.length) {
+                this.highlightGroup(this.currentGroup, "highlighters");
+                this.setCurrentGroupToSort(newGroup);
+            }
+            else
+                this.setCurrentGroup(newGroup);
+        }
+        else
+            this.setCurrentGroup(this.currentGroup.parent.children[indx]);    
+    }
+
+
+    undoSetCurrentGroupToSort(indx) {
+        console.log("UNDO SET CURRENT GROUP TO SORT");
+
+        console.log("L'indice è: ", indx);
+        this.setCurrentGroupToSort(this.currentGroup.parent.children[indx]);
+    }
+
+
+    undoShiftFramesByOne(startingIndx, swap) {
+        
+        console.log("UNDO SHIFT FRAMES BY ONE");
+        
+        var lastEmpty = startingIndx;
+        for (var i = startingIndx; i < this.relationArray.length - 1; i++) {
+            if (!this.relationArray[i].elements.length && this.relationArray[i + 1].elements.length) {
+                lastEmpty = i;
+                break;
+            }
+        }
+        console.log("Lo startind", startingIndx, "Lo swap", swap);
+        for (var j = 0; j < swap; j++) {
+            console.log("FACciaomo lo swap");
+            this.swapFrames(lastEmpty + j, lastEmpty + j + 1)
+        }
+    }
+
+    // Prima viene trovato quale sia il primo frameEmpty, in questo modo si conosce da quale indx
+    // ripristinare la relation. A questo punto vengono ricopiati i vecchi valori dei frame nel relation
+    // index e ripristinati i loro colori e valori.
+    undoAnimateMultipleSquares(firstEmpty, oldValue, oldColor, oldPosition) {
+        
+        console.log("UNDO ANIMATED MULTIPLE SQUARES");
+        
+        var indx = 0;
+        while (indx < this.relationArray.length && firstEmpty != this.relationArray[indx])
+            indx++;
+        for (var i = 0; i < this.currentGroup.children.length; i++) {
+            for (var j = 0; j < this.currentGroup.children[i].value.length; j++) {
+                this.currentGroup.children[i].value[j].resetFrame();
+                this.currentGroup.children[i].value[j].fill(oldValue[i][j]);
+                this.currentGroup.children[i].value[j].setColor(oldColor[i][j]);
+                this.currentGroup.children[i].value[j].setSorted(true);
+                this.currentGroup.children[i].value[j].setPosition(oldPosition[i][j][0],oldPosition[i][j][1]);
+                this.relationArray[indx] = this.currentGroup.children[i].value[j];
+                indx += 1;
+            }
+        }
+    }
+
+
+    undoAnimateOneSquare(endIndx) {
+
+        console.log("UNDO ANIMATE ONE SQUARE");
+
+        var startIndx = endIndx;
+        while (this.relationArray[startIndx].getValues().length)
+            startIndx -= 1;
+        while (startIndx < endIndx) {
+            this.swapFrames(startIndx, endIndx);
+            startIndx += 1;
+        }
+    }
+
+    undoReadOnePageOfChild(oldFrame = null) {
+        console.log("UNDO READ ONE PAGE");
+        
+        var frame = this.availableFrames.pop();
+        console.log("Il frame", frame.elements);
+        if (oldFrame) {
+            //var indx = this.getIndx(frame);
+            frame.fill(oldFrame.elements);
+            frame.setColor(oldFrame.color);
+        }
+    }
+
+
+    undoMergeChildren(oldGroups) {
+
+        console.log("UNDO MERGE CHILDREN");
+
+        console.log("Gli oldGroups sono", oldGroups);
+        console.log("I frames sono", this.currentGroup.value);
+
+        var frames = this.currentGroup.value;
+        this.currentGroup.value = [];
+
+        for (var i = 0; i < oldGroups.length; i++) {
+            while (oldGroups[i][0] >= this.currentGroup.children.length)
+                this.currentGroup.children.push(new TreeNode([], this.currentGroup));
+            while (oldGroups[i][1] >= this.currentGroup.children[oldGroups[i][0]].value.length)
+                this.currentGroup.children[oldGroups[i][0]].value.push(null);
+            this.currentGroup.children[oldGroups[i][0]].value[oldGroups[i][1]] = frames[i];
+        }
     }
 }

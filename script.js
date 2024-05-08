@@ -110,20 +110,6 @@ function getCurrentTween() {
 }
 
 
-function endTween(tween) {
-  tween.stop()
-  for (key in tween._valuesEnd)
-    tween._object[key] = tween._valuesEnd[key]
-  if (tween._onCompleteCallback)
-    tween._onCompleteCallback()
-  var chainedTweens = tween._chainedTweens
-  for (var i = 0; i < chainedTweens.length; i++) {
-    if (chainedTweens[i]._onStartCallback)
-      chainedTweens[i]._onStartCallback()
-    endTween(chainedTweens[i])
-  }
-}
-
 function sort() {
   if (buffer.sortingStatus & 2)
     buffer.writeFromOutputToMain()
