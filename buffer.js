@@ -344,6 +344,9 @@ class Buffer {
         }
         this.outputFrame.resetFrame();
         this.outputFrame.fill(oldFramesValues[oldFramesValues.length - 1]);
+        for (var i = 0; i < this.framesToRefill.length; i++)
+            this.frameRefilled[this.framesToRefill[i]] = true;
+        this.framesToRefill = [];
     }
 
     undoFlushOutputFrame(oldValues) {

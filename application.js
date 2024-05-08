@@ -542,7 +542,7 @@ function play(time = animTime) {
             // Controlla se questo gruppo e' la radice (significa che hai finito tutto)
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
-                rollback.push([() => relation.undoHighlightGroup("highlighters"), States.GroupSorted, textBox.innerHTML]);
+                rollback.push([() =>  relation.highlightGroup(currentGroup, "highlighters"), States.GroupSorted, textBox.innerHTML]);
                 applicationState = States.Finish;
                 relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
                 showMessage(Messages.finished);
@@ -550,24 +550,23 @@ function play(time = animTime) {
             }
             // Altrimenti vedi se ha un fratello
             else {
-                const oldGroup = relation.currentGroup
                 var next_sibling = relation.getNextSibling();
                 // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
                 if (next_sibling == null) {
                     console.log("current group has no siblings left");
-                    rollback.push([() => relation.undoSetCurrentGroup(oldGroup, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
+                    rollback.push([() => relation.undoSetCurrentGroup(-1, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
                     relation.setCurrentGroup(currentGroup.parent);
                     applicationState = States.GroupToMerge;
                     if (!automaticPlay) showMessage(Messages.childrenMustBeMergeSorted);
                 }
                 else {
-                    console.log("current group has siblings left");
+                    var childIndx = relation.getChildIndx(next_sibling);
                     if (currentGroup.value.length > buffer.length - 1) {
-                        rollback.push([() => relation.undoSetCurrentGroup(oldGroup, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
+                        rollback.push([() => relation.undoSetCurrentGroup(childIndx - 1, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
                         relation.setCurrentGroup(next_sibling);
                     }
                     else {
-                        rollback.push([() => relation.undoSetCurrentGroupToSort(oldGroup), States.GroupSorted, textBox.innerHTML]);
+                        rollback.push([() => relation.undoSetCurrentGroupToSort(childIndx - 1), States.GroupSorted, textBox.innerHTML]);
                         relation.setCurrentGroupToSort(next_sibling);
                     }
                     applicationState = States.GroupToSort;
@@ -695,9 +694,7 @@ function play(time = animTime) {
                 oldFramesValues.push(frame.getValues());
             oldFramesValues.push(buffer.outputFrame.getValues());
             rollback.push([() => {
-                buffer.framesToRefill = [];
                 buffer.undoSortAnimation(oldFramesValues);
-                buffer.frameRefilled = oldToRefill;
             }, States.ChildrenInBuffer, textBox.innerHTML])
             
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
