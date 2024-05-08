@@ -414,11 +414,18 @@ function reset() {
 function showMessage(text) {
     textBox.innerHTML = text;
 }
-
+function showMessageBoxContent(show) {
+    if (show) {
+        textBox.removeAttribute("hidden");
+    }
+    else {
+        textBox.setAttribute("hidden", null);
+    }
+}
 
 
 function playOne(time = animTime) {
-    if (applicationState == States.Finish) return;
+    if (applicationState == States.Finish || playing) return;
 
     // esci dalla pausa
     paused = false;
@@ -483,6 +490,13 @@ function pause() {
 
 
 function undo() {
+
+    // se e' attiva la riproduzione automatica, metti in pausa invece di fare undo?
+    if (automaticPlay && !paused) {
+        pause();
+        return;
+    }
+
     //endTween(tween);
     if (rollback.length) {
         var lastAction = rollback[rollback.length -  1];
@@ -500,6 +514,8 @@ function undo() {
     if (applicationState == States.Start) {
         undoButton.disabled = true;
     }
+
+    showMessageBoxContent(true);
 }
 
 
@@ -516,16 +532,15 @@ function play(time = animTime) {
         
         case States.Start:
             // Questo controllo e' per mostrare il messaggio giusto
-            if (!automaticPlay) {
-                if (relation.getCurrentGroup().value.length > bufferSize - 1) {
-                    showMessage(Messages.currentGroupDoesNotFit);
-                }
-                else {
-                    showMessage(Messages.currentGroupFitsInBuffer);
-                }
+            if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                showMessage(Messages.currentGroupDoesNotFit);
             }
+            else {
+                showMessage(Messages.currentGroupFitsInBuffer);
+            }
+            
 
-            rollback.push([() => relation.undoHighlightGroup("highlighters"), States.Start, "Waiting to start"]);
+            rollback.push([() => relation.undoHighlightGroup("highlighters"), States.Start, "Waiting to start."]);
 
             relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
                 applicationState = States.GroupToSort;
@@ -544,14 +559,13 @@ function play(time = animTime) {
                 rollback.push([() => relation.undoSplitGroup(oldColor), States.GroupToSort, textBox.innerHTML])
 
                 // Questo controllo e' per mostrare il messaggio giusto
-                if (!automaticPlay) {
-                    if (relation.getCurrentGroup().value.length > bufferSize - 1) {
-                        showMessage(Messages.currentGroupDoesNotFit);
-                    }
-                    else {
-                        showMessage(Messages.currentGroupFitsInBuffer);
-                    }
+                if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                    showMessage(Messages.currentGroupDoesNotFit);
                 }
+                else {
+                    showMessage(Messages.currentGroupFitsInBuffer);
+                }
+                
 
                 callback();
             }
@@ -594,7 +608,7 @@ function play(time = animTime) {
                     document.getElementById('read-count').textContent = nRead;
 
                     applicationState = States.GroupInBuffer;
-                    if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
+                    showMessage(Messages.bufferContentBeingSorted);
                     callback();
                 });
             }
@@ -610,7 +624,7 @@ function play(time = animTime) {
             // Avvia il sort
             tween = buffer.sortAnimation(time / 5, () => {
                 applicationState = States.OutputFrameFullSorting;
-                if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                showMessage(Messages.outputFrameFull);
                 callback();
             });
             break;
@@ -637,11 +651,11 @@ function play(time = animTime) {
                 // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
                 if (buffer.bufferContainsSomething()) {
                     applicationState = States.GroupInBuffer;
-                    if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
+                    showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
                     applicationState = States.GroupSorted;
-                    if (!automaticPlay) showMessage(Messages.currentGroupSorted);
+                    showMessage(Messages.currentGroupSorted);
                 }
                 callback();
             });
@@ -674,7 +688,7 @@ function play(time = animTime) {
                     relation.setCurrentGroup(currentGroup.parent);
                     relation.highlightGroup(null, "highlightersSort");
                     applicationState = States.GroupToMerge;
-                    if (!automaticPlay) showMessage(Messages.childrenMustBeMergeSorted);
+                    showMessage(Messages.childrenMustBeMergeSorted);
                 }
                 else {
                     var childIndx = relation.getChildIndx(next_sibling);
@@ -688,14 +702,13 @@ function play(time = animTime) {
                     }
                     applicationState = States.GroupToSort;
                     // Questo controllo e' per mostrare il messaggio giusto
-                    if (!automaticPlay) {
-                        if (relation.getCurrentGroup().value.length > bufferSize - 1) {
-                            showMessage(Messages.currentGroupDoesNotFit);
-                        }
-                        else {
-                            showMessage(Messages.currentGroupFitsInBuffer);
-                        }
+                    if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                        showMessage(Messages.currentGroupDoesNotFit);
                     }
+                    else {
+                        showMessage(Messages.currentGroupFitsInBuffer);
+                    }
+                    
                 }
                 callback();
             }
@@ -780,7 +793,7 @@ function play(time = animTime) {
                 console.log("LA RELATON DOPO FUN", relation.relationArray);
 
                 applicationState = States.ChildrenInBuffer;
-                if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
+                showMessage(Messages.childrenBeingMergeSorted);
                 callback();
             });
 
@@ -803,11 +816,11 @@ function play(time = animTime) {
                 time / 5,
                 () => {
                     applicationState = States.OutputFrameFullMerging;
-                    if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                    showMessage(Messages.outputFrameFull);
                     callback();},
                 () => {
                     applicationState = States.OneEmptyFrameInBuffer;
-                    if (!automaticPlay) showMessage(Messages.emptyFrameInBuffer);
+                    showMessage(Messages.emptyFrameInBuffer);
                     callback();},
                 true    // merge
             )
@@ -854,15 +867,15 @@ function play(time = animTime) {
                         // Se l'output è pieno
                         if (buffer.framesToRefill.length) {
                             applicationState = States.OneEmptyFrameInBuffer;
-                            if (!automaticPlay) showMessage(Messages.emptyFrameInBuffer);
+                            showMessage(Messages.emptyFrameInBuffer);
                         }
                         else if (buffer.checkFullOutput()) {
                             applicationState = States.OutputFrameFullMerging;
-                            if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                            showMessage(Messages.outputFrameFull);
                         }
                         else {
                             applicationState = States.ChildrenInBuffer;
-                            if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
+                            showMessage(Messages.childrenBeingMergeSorted);
                         }
                         callback();
                     });
@@ -873,16 +886,16 @@ function play(time = animTime) {
                 rollback.push(() => {buffer.framesToRefill.push(frameEmptyIndx);}, States.OneEmptyFrameInBuffer, textBox.innerHTML);
                 if (buffer.checkFullOutput()) {
                     applicationState = States.OutputFrameFullMerging;
-                    if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                    showMessage(Messages.outputFrameFull);
                 }
                 // Il buffer non è vuoto
                 else if (buffer.bufferContainsSomething()) {
                     applicationState = States.ChildrenInBuffer;
-                    if (!automaticPlay) showMessage(Messages.childrenBeingMergeSorted);
+                    showMessage(Messages.childrenBeingMergeSorted);
                 }
                 else {
                     applicationState = States.OutputFrameFullMerging;
-                    if (!automaticPlay) showMessage(Messages.outputFrameFull);
+                    showMessage(Messages.outputFrameFull);
                 }
                 callback();
             }
@@ -934,12 +947,12 @@ function play(time = animTime) {
                 if (buffer.bufferContainsSomething()) {
                     console.log("buffer still contains something");
                     applicationState = States.ChildrenInBuffer;
-                    if (!automaticPlay) showMessage(Messages.bufferContentBeingSorted);
+                    showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
                     relation.mergeChildren();
                     applicationState = States.GroupSorted;
-                    if (!automaticPlay) showMessage(Messages.currentGroupSorted);
+                    showMessage(Messages.currentGroupSorted);
                 }
                 callback();
             });
@@ -989,6 +1002,10 @@ function endTween(tween) {
 
 async function callback() {
     playing = false;    // per dire che l'esecuzione attuale e' terminata
+
+    // Se non e' attiva la riproduzione automatica, mostra la message box, altrimenti nascondila
+    showMessageBoxContent(!automaticPlay);
+
     if (!paused && automaticPlay) {
         await new Promise(r => setTimeout(r, waitingTime));
         play(animTime);
