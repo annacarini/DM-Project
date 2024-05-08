@@ -463,8 +463,7 @@ function playAll() {
     // attiva pulsante pausa
     pauseButton.disabled = false;
 
-    // leva i messaggi
-    showMessage("");
+    showMessageBoxContent(false);
 
     play(animTime);
 }
@@ -476,6 +475,8 @@ function pause() {
 
     // metti in pausa
     paused = true;
+
+    automaticPlay = false;
 
     if (applicationState == States.Finish) return;
 
@@ -492,7 +493,7 @@ function pause() {
 function undo() {
 
     // se e' attiva la riproduzione automatica, metti in pausa invece di fare undo?
-    if (automaticPlay && !paused) {
+    if (automaticPlay) {
         pause();
         return;
     }
@@ -516,6 +517,7 @@ function undo() {
     }
 
     showMessageBoxContent(true);
+    console.log("text box content: ", textBox.innerHTML);
 }
 
 
@@ -766,8 +768,7 @@ function play(time = animTime) {
                 buffer.undoWriteOnBuffer();
                 for (var i = framesToWrite.length - 1; i >= 0; i--)
                     relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
-                //relation.undoAnimateMultipleSquares(framesToWrite[0], oldFrameValues, oldColors, oldPositions);
-                console.log("LA RELATON", relation.relationArray);
+                console.log("LA RELATION", relation.relationArray);
                 for (var i = framesToWrite.length - 1; i >= 0; i--)
                     relation.undoReadOnePageOfChild(framesToWrite[i]);
                 console.log("IL VALORE DI CURRENT group", relation.currentGroup)
@@ -790,7 +791,7 @@ function play(time = animTime) {
                 nRead += framesToWrite.length
                 document.getElementById('read-count').textContent = nRead;
 
-                console.log("LA RELATON DOPO FUN", relation.relationArray);
+                console.log("LA RELATION DOPO FUN", relation.relationArray);
 
                 applicationState = States.ChildrenInBuffer;
                 showMessage(Messages.childrenBeingMergeSorted);
@@ -843,7 +844,6 @@ function play(time = animTime) {
                 rollback.push([() => {
                     buffer.undoWriteOnBufferFrame(frameEmptyIndx);
                     relation.undoShiftFramesByOne(startingIndx, swap);
-                    //relation.undoAnimateOneSquare(relationIndx);
                     relation.undoReadOnePageOfChild(fr);
                     buffer.framesToRefill.push(frameEmptyIndx);
                     nRead -= 1;
@@ -965,6 +965,7 @@ function play(time = animTime) {
             playJumpButton.disabled = true;
             playButton.disabled = true;
             undoButton.disabled = false;
+            showMessageBoxContent(true);
             break;
 
         default:
