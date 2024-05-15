@@ -12,6 +12,7 @@ const States = {
 	Start: "Start",
 	GroupToSort: "Current group is not sorted",
 	GroupInBuffer: "Current group loaded in buffer, waiting to be sorted",
+    BufferSorted: "The buffer is sorted",
 	OutputFrameFullSorting: "Sorting, the output frame is full",
     GroupSorted: "Current group is being sorted",
     GroupToMerge: "Current group has children that must be merge-sorted",
@@ -162,6 +163,7 @@ const Messages = {
     currentGroupDoesNotFit: "The current group doesn't fit in the buffer, so it must be split.",
     currentGroupFitsInBuffer: "The current group fits in the buffer, so it will be copied there.",
     childrenMustBeMergeSorted: "These sub-groups have been individually sorted, now they must be merged.",
+    bufferSorted: "The buffer is sorted.",
     outputFrameFull: "The output frame is full, so it must be written back in the relation.",
     emptyFrameInBuffer: "The buffer has an empty frame. It must load a new page of the corresponding sub-group.",
     bufferContentBeingSorted: "The content of the buffer must be sorted.",
@@ -532,7 +534,7 @@ function play(time = animTime) {
         
         case States.Start:
             // Questo controllo e' per mostrare il messaggio giusto
-            if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+            if (relation.getCurrentGroup().value.length > bufferSize) {
                 showMessage(Messages.currentGroupDoesNotFit);
             }
             else {
@@ -553,13 +555,13 @@ function play(time = animTime) {
             var currentGroup = relation.getCurrentGroup();
 
             // Se il gruppo non entra nel buffer, splittalo e rimani in questo stato
-            if (currentGroup.value.length > bufferSize - 1) {
+            if (currentGroup.value.length > bufferSize) {
                 var oldColor = currentGroup.value[0].color
                 relation.splitGroup(bufferSize - 1);
                 rollback.push([() => relation.undoSplitGroup(oldColor), States.GroupToSort, textBox.innerHTML])
 
                 // Questo controllo e' per mostrare il messaggio giusto
-                if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                if (relation.getCurrentGroup().value.length > bufferSize) {
                     showMessage(Messages.currentGroupDoesNotFit);
                 }
                 else {
@@ -618,45 +620,37 @@ function play(time = animTime) {
             var oldFramesValues = [];
             for (frame of buffer.frames)
                 oldFramesValues.push(frame.getValues());
-            oldFramesValues.push(buffer.outputFrame.getValues());
             rollback.push([() => buffer.undoSortAnimation(oldFramesValues), States.GroupInBuffer, textBox.innerHTML]);
 
             // Avvia il sort
             tween = buffer.sortAnimation(time / 5, () => {
-                applicationState = States.OutputFrameFullSorting;
-                showMessage(Messages.outputFrameFull);
+                applicationState = States.BufferSorted;
+                showMessage(Messages.bufferSorted);
                 callback();
             });
             break;
     
-        case States.OutputFrameFullSorting:
-            const oldValues = buffer.outputFrame.getValues();
-            var freeAvailableFrame = relation.getFreeAvailableFrame();
+        case States.BufferSorted:
             rollback.push([() => {
-                buffer.undoFlushOutputFrame(oldValues);
-                relation.undoWriteWithAnimation(freeAvailableFrame);
+                var oldValues = relation.readCurrentGroup();
+                buffer.writeOnBuffer(oldValues);
+                for (var frame of buffer.frames)
+                    frame.setSorted(true);
                 nWrite -= 1;
                 document.getElementById('write-count').textContent = nWrite;
-            }, States.OutputFrameFullSorting, textBox.innerHTML]);
+            }, States.BufferSorted, textBox.innerHTML]);
             
             // Prendi l'output frame
-            var frame = buffer.flushOutputFrame();
+            var frames = buffer.clear();
 
             // Copia l'output frame nella relazione
-            tween = relation.writeWithAnimation(frame, false, time, () => {
+            tween = relation.writeGroupAnimation(frames, time, () => {
                 // Aggiorno il valore del numero di write
                 nWrite += 1
                 document.getElementById('write-count').textContent = nWrite;
 
-                // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
-                if (buffer.bufferContainsSomething()) {
-                    applicationState = States.GroupInBuffer;
-                    showMessage(Messages.bufferContentBeingSorted);
-                }
-                else {
-                    applicationState = States.GroupSorted;
-                    showMessage(Messages.currentGroupSorted);
-                }
+                applicationState = States.GroupSorted;
+                showMessage(Messages.currentGroupSorted);
                 callback();
             });
 
@@ -688,6 +682,7 @@ function play(time = animTime) {
                     relation.setCurrentGroup(currentGroup.parent);
                     relation.highlightGroup(null, "highlightersSort");
                     applicationState = States.GroupToMerge;
+                    buffer.setMode('merge');
                     showMessage(Messages.childrenMustBeMergeSorted);
                 }
                 else {
@@ -812,7 +807,7 @@ function play(time = animTime) {
             
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
             // se invece c'è un frame che è stato svuotato allora va riempito (caso 2)
-            tween = buffer.sortAnimation(
+            tween = buffer.mergeAnimation(
                 time / 5,
                 () => {
                     applicationState = States.OutputFrameFullMerging;
@@ -951,6 +946,7 @@ function play(time = animTime) {
                 }
                 else {
                     relation.mergeChildren();
+                    buffer.setMode('sort');
                     applicationState = States.GroupSorted;
                     showMessage(Messages.currentGroupSorted);
                 }

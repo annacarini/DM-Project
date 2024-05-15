@@ -26,7 +26,7 @@ class Buffer {
         var framePosition = x - totalWidth/2 + frameSize/2;
 
         // Crea i primi M-1 frame
-        for (var i = 0; i < length-1; i++) {
+        for (var i = 0; i < length; i++) {
             var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
             newFrame.setView(1);
             this.frames.push(newFrame);
@@ -35,15 +35,17 @@ class Buffer {
         }
 
         // Crea output frame
-        framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
-        this.outputFrame = new Frame(framePosition, y, frameSize, this.outputFrameColor, MAX_ELEMENTS_PER_FRAME, two)
-        this.outputFrame.setSorted(true)
+        //framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
+        //this.outputFrame = new Frame(framePosition, y, frameSize, this.outputFrameColor, MAX_ELEMENTS_PER_FRAME, two)
+        //this.outputFrame.setSorted(true)
+        this.outputFrame = this.frames[this.frames.length - 1];
 
         // Aggiungi scritta "output frame"
         var textStyle = fontStyleSmallBlackCentered;
         textStyle.weight = 600;
-        this.outputFrameTxt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
-        
+        this.outputFrameTxt = two.makeText("Output frame", framePosition - (frameSize) + this.spaceBetween, y - frameSize * 0.6, textStyle);
+        this.outputFrameTxt.visible = false
+
         this.group.add(this.outputFrame.group)
         this.group.add(this.outputFrameTxt)
 
@@ -58,6 +60,23 @@ class Buffer {
 
     setPosition(x, y) {
         this.group.translation.set(x, y)
+    }
+
+
+    setMode(mode) {
+        if (mode == 'sort') {
+            this.outputFrameTxt.visible = false;
+            this.outputFrame.setSorted(false);
+            if (this.frames.length < this.length)
+                this.frames.push(this.outputFrame);
+                this.outputFrame.setPosition(this.outputFrame.x - this.spaceBetween, this.outputFrame.y);
+        }
+        else {
+            this.outputFrameTxt.visible = true;
+            this.frames.pop();
+            this.outputFrame.setSorted(true);
+            this.outputFrame.setPosition(this.outputFrame.x + this.spaceBetween, this.outputFrame.y);
+        }
     }
 
 
@@ -217,7 +236,29 @@ class Buffer {
     }
 
 
-    sort(merge = false) {
+    sort() {
+        // Inserisco in list tutti valori presenti nei frames e nel frattempo resetto i frames
+        var list = [];
+        for (var frame of this.frames) {
+            var frameValues = frame.getValues();
+            for (var i = 0; i < frameValues.length; i++)
+                list.push(frameValues[i]);
+            frame.resetFrame();
+            frame.setSorted(true);
+        }
+        console.log("LA LISTA E'", list);
+        list.sort((a, b) => a - b);
+        console.log("LA LISTA E'", list);
+
+        // Inserisco nei frames i nuovi valori ordinati
+        for (var i = 0; i < list.length; i++) {
+            this.frames[Math.floor(i / MAX_ELEMENTS_PER_FRAME)].addElement(list[i]);
+        }
+        
+    }
+
+
+    merge() {
         // Ottengo un array contenente gli n valori più piccoli prensenti nel buffer, dove n sono gli elementi mancanti nell'output
         var lastValues = this._findLastValues(MAX_ELEMENTS_PER_FRAME - this.outputFrame.getValues().length)
         
@@ -227,7 +268,7 @@ class Buffer {
             deleted[i] = Array(this.frames[i].getValues().length).fill(0)
 
         // Fino a che non scorro tutti i valori chiamo la writeFromTo sull'attuale valore.
-        // Se merge è true mi fermo prima, cioè quando un frame diventa vuoto.
+        // Quando un frame diventa vuoto e va ricaricato mi fermo.
         for (var i = 0; i < lastValues.length; i++) {
             var frameIndx = lastValues[i][2]
             var indx = lastValues[i][1]
@@ -236,7 +277,7 @@ class Buffer {
             for (var j = indx; j < deleted[frameIndx].length; j++)
                 deleted[frameIndx][j] += 1
             // Se un frame è da refillare blocco
-            if (merge && deleted[frameIndx][deleted[frameIndx].length -1] == deleted[frameIndx].length && this.frameRefilled[frameIndx])
+            if (deleted[frameIndx][deleted[frameIndx].length -1] == deleted[frameIndx].length && this.frameRefilled[frameIndx])
                 break
         }
     }
@@ -258,13 +299,21 @@ class Buffer {
             callback()
     }
 
+    
+    sortAnimation(time = 200, callback = () => {}) {
+        this.sort();
+        var tween = new TWEEN.Tween(null).to(null, time).onComplete(() => {callback()})
+        tween.start();
+        return tween;
+    }
 
-    sortAnimation(time = 200, sortCallback = () => {}, mergeCallback = () => {}, merge = false) {
-        this.sort(merge);
+
+    mergeAnimation(time = 200, sortCallback = () => {}, mergeCallback = () => {}) {
+        this.merge();
         var tween = new TWEEN.Tween(null).to(null, time).onComplete( () => {
                 this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
                 this.framesToRefill = this.checkToRefill();
-                if (merge && (this.framesToRefill.length)) {
+                if (this.framesToRefill.length) {
                     for (var i = 0; i < this.framesToRefill.length; i++)
                         this.frameRefilled[this.framesToRefill[i]] = false;
                     mergeCallback();
@@ -296,6 +345,25 @@ class Buffer {
             sorted: this.outputFrame.sorted
         }
         this.outputFrame.resetFrame();
+        return res;
+    }
+
+    // Restituisce il contenuto di tutto il buffer e lo svuota
+    clear() {
+        var res = [];
+        for (var frame of this.frames) {
+            var frameInfo = {
+                x: frame.x,
+                y: frame.y,
+                size: frame.realSize(),
+                color: frame.color,
+                elements: frame.getValues(),
+                sorted: frame.sorted
+            }
+            if (frameInfo.elements.length)
+                res.push(frameInfo);
+            frame.resetFrame();
+        }
         return res;
     }
 
@@ -357,7 +425,17 @@ class Buffer {
         }
     }
 
+
     undoSortAnimation(oldFramesValues) {
+        for (var i = 0; i < oldFramesValues.length; i++) {
+            this.frames[i].resetFrame();
+            this.frames[i].fill(oldFramesValues[i]);
+            this.frames[i].setSorted(false);
+        }
+    }
+
+
+    undoMergeAnimation(oldFramesValues) {
         for (var i = 0; i < oldFramesValues.length - 1; i++) {
             this.frames[i].resetFrame();
             this.frames[i].fill(oldFramesValues[i]);

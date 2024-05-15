@@ -699,6 +699,36 @@ class Relation {
     }
 
 
+    writeGroupAnimation(frames, time = 1000, callback=null) {
+        var res = [];
+        console.log("GLI AVAILABLE", this.availableFrames);
+        console.log("FRAME", frames);
+        for (let i = 0; i < frames.length; i++) {
+            let frame = frames[i];
+            let final_color = this.availableFrames[i].color;
+            var end_x = this.availableFrames[i].x;
+            var end_y = this.availableFrames[i].y;
+            var end_size = this.availableFrames[i].realSize();
+            var tween = animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, time, () => {
+                // scrivi gli elementi
+                this.availableFrames[i].fill(frame.elements);
+                // cambia il colore (serve farlo a prescindere per reimpostare l'opacita' ad 1)
+                this.availableFrames[i].setColor(final_color);
+                this.availableFrames[i].setSorted(frame.sorted);
+                // se questo era l'ultimo availableFrame (ed ora e' stato riempito), svuota l'array
+                if (i == this.availableFrames.length - 1) {
+                    this.emptyAvailableFrames();
+                    if (callback != null) callback();
+                }
+            });
+
+            //res = true;
+            res.push(tween);
+        }
+        return res;
+    }
+
+
     writeWithAnimation(frame, newColor, time = 1000, callback=null) {
         //var res = false;
         var res = null;
