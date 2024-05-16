@@ -698,7 +698,7 @@ function play(time = animTime) {
                     }
                     applicationState = States.GroupToSort;
                     // Questo controllo e' per mostrare il messaggio giusto
-                    if (relation.getCurrentGroup().value.length > bufferSize - 1) {
+                    if (relation.getCurrentGroup().value.length > bufferSize) {
                         showMessage(Messages.currentGroupDoesNotFit);
                     }
                     else {
