@@ -12,6 +12,7 @@ class Buffer {
         this.spaceBetween = SPACE_BETWEEN_FRAMES;
         this.spaceOutputFrame = 3;
         this.frames = [];
+        this.mode = 'sort';
 
         this.linewidth = THICK_LINE;
         this.outputFrameColor = "rgb(210, 210, 210)";
@@ -66,6 +67,7 @@ class Buffer {
         this.mode = mode;
 
         if (mode == 'sort') {
+            this.mode = 'sort';
             this.outputFrameTxt.visible = false;
             this.outputFrame.setSorted(false);
 
@@ -82,6 +84,7 @@ class Buffer {
                 this.frames.push(this.outputFrame);
         }
         else {
+            this.mode = 'merge';
             this.outputFrameTxt.visible = true;
             this.frames.pop();
             this.outputFrame.setSorted(true);

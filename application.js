@@ -679,7 +679,7 @@ function play(time = animTime) {
                 // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
                 if (next_sibling == null) {
                     console.log("current group has no siblings left");
-                    rollback.push([() => relation.undoSetCurrentGroup(-1, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
+                    rollback.push([() => {relation.undoSetCurrentGroup(-1, buffer.length - 1); buffer.setMode('sort')}, States.GroupSorted, textBox.innerHTML]);
                     relation.setCurrentGroup(currentGroup.parent);
                     relation.highlightGroup(null, "highlightersSort");
                     applicationState = States.GroupToMerge;
@@ -802,7 +802,7 @@ function play(time = animTime) {
                 oldFramesValues.push(frame.getValues());
             oldFramesValues.push(buffer.outputFrame.getValues());
             rollback.push([() => {
-                buffer.undoSortAnimation(oldFramesValues);
+                buffer.undoMergeAnimation(oldFramesValues);
             }, States.ChildrenInBuffer, textBox.innerHTML])
             
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
@@ -916,6 +916,8 @@ function play(time = animTime) {
             }
             rollback.push([() => {
                 buffer.undoFlushOutputFrame(oldBufferValues);
+                if (buffer.mode != 'merge')
+                    buffer.setMode('merge');
                 if (!buffer.bufferContainsSomething())
                     relation.undoMergeChildren(oldIndices);
                 relation.undoWriteWithAnimation(freeAvailableFrame, oldIndices);
