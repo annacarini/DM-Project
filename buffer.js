@@ -10,6 +10,7 @@ class Buffer {
         this.frame_size = frameSize;
         this.length = length;
         this.spaceBetween = SPACE_BETWEEN_FRAMES;
+        this.spaceOutputFrame = 3;
         this.frames = [];
 
         this.linewidth = THICK_LINE;
@@ -21,11 +22,12 @@ class Buffer {
         this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false);
         this.framesToRefill = [];
 
-        var spaceOutputFrame = 6;
-        var totalWidth = length*frameSize + (length - 1 + spaceOutputFrame)*this.spaceBetween;
+        this.mode = "sort"; // serve salvarlo per il redraw
+
+        var totalWidth = length*frameSize + (length - 1)*this.spaceBetween;
         var framePosition = x - totalWidth/2 + frameSize/2;
 
-        // Crea i primi M-1 frame
+        // Crea i frame
         for (var i = 0; i < length; i++) {
             var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
             newFrame.setView(1);
@@ -35,16 +37,13 @@ class Buffer {
         }
 
         // Crea output frame
-        //framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
-        //this.outputFrame = new Frame(framePosition, y, frameSize, this.outputFrameColor, MAX_ELEMENTS_PER_FRAME, two)
-        //this.outputFrame.setSorted(true)
         this.outputFrame = this.frames[this.frames.length - 1];
 
         // Aggiungi scritta "output frame"
         var textStyle = fontStyleSmallBlackCentered;
         textStyle.weight = 600;
-        this.outputFrameTxt = two.makeText("Output frame", framePosition - (frameSize) + this.spaceBetween, y - frameSize * 0.6, textStyle);
-        this.outputFrameTxt.visible = false
+        this.outputFrameTxt = two.makeText("Output frame", framePosition - frameSize - this.spaceBetween + (this.spaceBetween*this.spaceOutputFrame)/2, y - (frameSize * 0.6), textStyle);
+        this.outputFrameTxt.visible = false;
 
         this.group.add(this.outputFrame.group)
         this.group.add(this.outputFrameTxt)
@@ -64,18 +63,37 @@ class Buffer {
 
 
     setMode(mode) {
+        this.mode = mode;
+
         if (mode == 'sort') {
             this.outputFrameTxt.visible = false;
             this.outputFrame.setSorted(false);
+
+            // sposta tutti i frame a destra di (this.spaceBetween*this.spaceOutputFrame)/2
+            var transl = (this.spaceBetween*this.spaceOutputFrame)/2;
+            for (var i = 0; i < this.frames.length; i++) {
+                this.frames[i].setPosition(this.frames[i].x + transl, this.frames[i].y);
+            }
+            // sposta output frame a sinistra di (this.spaceBetween*this.spaceOutputFrame)/2
+            this.outputFrame.setPosition(this.outputFrame.x - transl, this.outputFrame.y);
+
+            // aggiungi output frame alla lista di frame
             if (this.frames.length < this.length)
                 this.frames.push(this.outputFrame);
-                this.outputFrame.setPosition(this.outputFrame.x - this.spaceBetween, this.outputFrame.y);
         }
         else {
             this.outputFrameTxt.visible = true;
             this.frames.pop();
             this.outputFrame.setSorted(true);
-            this.outputFrame.setPosition(this.outputFrame.x + this.spaceBetween, this.outputFrame.y);
+            this.outputFrame.setColor(this.outputFrameColor);
+
+            // sposta tutti i frame a sinistra di (this.spaceBetween*this.spaceOutputFrame)/2
+            var transl = (this.spaceBetween*this.spaceOutputFrame)/2;
+            for (var i = 0; i < this.frames.length; i++) {
+                this.frames[i].setPosition(this.frames[i].x - transl, this.frames[i].y);
+            }
+            // sposta output frame a destra di (this.spaceBetween*this.spaceOutputFrame)/2
+            this.outputFrame.setPosition(this.outputFrame.x + transl, this.outputFrame.y);
         }
     }
 
@@ -381,40 +399,49 @@ class Buffer {
 
 
 
-    // Da chiamare quando cambia la dimensione della finestra
+    /****************** REDRAW per quando cambia la dimensione della finestra *****************/
     redrawBuffer(x, y) {
 
-        var spaceOutputFrame = 6;
-        var totalWidth = this.frames.length*frameSize + (this.frames.length - 1 + spaceOutputFrame)*SPACE_BETWEEN_FRAMES;
+        var totalWidth = this.length*frameSize + (this.length - 1)*this.spaceBetween;
         var framePosition = x - totalWidth/2 + frameSize/2;
 
-        // Ridimensiona e riposiziona i frame
+        // Ridimensiona e riposiziona i frame (incluso output frame se siamo in fase sort)
         for (var i = 0; i < this.frames.length; i++) {
-            /*
-            var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
-            newFrame.setView(1);
-            this.frames.push(newFrame);
-            this.group.add(newFrame.group);
-            */
-
             this.frames[i].resizeFrame(frameSize);
             this.frames[i].setPosition(framePosition, y);
             framePosition += frameSize + this.spaceBetween;
         }
 
-        // Ridimensiona output frame
-        this.outputFrame.resizeFrame(frameSize);
-
-        // Riposiziona output frame
-        framePosition += spaceOutputFrame*SPACE_BETWEEN_FRAMES;
-        this.outputFrame.setPosition(framePosition, y);
-
         // Leva e ri-aggiungi scritta "output frame"
         this.outputFrameTxt.remove();
         var textStyle = fontStyleSmallBlackCentered;
         textStyle.weight = 600;
-        this.outputFrameTxt = two.makeText("Output frame", framePosition, y - frameSize * 0.6, textStyle);
-        this.group.add(this.outputFrameTxt);
+
+        if (this.mode == 'sort') {
+            this.outputFrameTxt = two.makeText("Output frame", framePosition - frameSize - this.spaceBetween + (this.spaceBetween*this.spaceOutputFrame)/2, y - (frameSize * 0.6), textStyle);
+            this.group.add(this.outputFrameTxt);
+            this.outputFrameTxt.visible = false;
+
+        }
+        else {
+            this.outputFrameTxt = two.makeText("Output frame", framePosition + (this.spaceBetween*this.spaceOutputFrame)/2, y - frameSize * 0.6, textStyle);
+            this.group.add(this.outputFrameTxt);
+            this.outputFrameTxt.visible = true;
+
+            // Ridimensiona output frame (perche' non e' stato ridimensionato prima insieme agli altri)
+            this.outputFrame.resizeFrame(frameSize);
+
+            // sposta tutti i frame a sinistra di (this.spaceBetween*this.spaceOutputFrame)/2
+            var transl = (this.spaceBetween*this.spaceOutputFrame)/2;
+            for (var i = 0; i < this.frames.length; i++) {
+                this.frames[i].setPosition(this.frames[i].x - transl, this.frames[i].y);
+            }
+            // sposta output frame a destra di (frameSize + this.spaceBetween*(this.spaceOutputFrame + 1)) rispetto all'ultimo frame
+            var lastFrame = this.frames[this.frames.length - 1];
+            var translOutput = frameSize + this.spaceBetween*(this.spaceOutputFrame + 1);
+            this.outputFrame.setPosition(lastFrame.x + translOutput, lastFrame.y);
+        }
+        
     }
     
     /****************** UNDO *****************/
