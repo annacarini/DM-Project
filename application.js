@@ -60,7 +60,7 @@ var centerY = windowH / 2;
 const MAX_ELEMENTS_PER_FRAME = 5;
 
 var MEDIUM_LINE = windowW/550;
-var THICK_LINE = windowW/400;
+var THICK_LINE = windowW/420;
 var VERY_THICK_LINE = windowW/320;
 
 var frameSize = windowW/15;
@@ -632,22 +632,22 @@ function play(time = animTime) {
             break;
     
         case States.BufferSorted:
+            // Prendi i frame non vuoti del buffer
+            var frames = buffer.clear();
+
             rollback.push([() => {
                 var oldValues = relation.readCurrentGroup();
                 buffer.writeOnBuffer(oldValues);
                 for (var frame of buffer.frames)
                     frame.setSorted(true);
-                nWrite -= 1;
+                nWrite -= frames.length;
                 document.getElementById('write-count').textContent = nWrite;
             }, States.BufferSorted, textBox.innerHTML]);
             
-            // Prendi l'output frame
-            var frames = buffer.clear();
-
             // Copia l'output frame nella relazione
             tween = relation.writeGroupAnimation(frames, time, () => {
                 // Aggiorno il valore del numero di write
-                nWrite += 1
+                nWrite += frames.length;
                 document.getElementById('write-count').textContent = nWrite;
 
                 applicationState = States.GroupSorted;
@@ -1052,7 +1052,7 @@ function updateSizes() {
     centerY = windowH / 2;
 
     MEDIUM_LINE = windowW/550;
-    THICK_LINE = windowW/400;
+    THICK_LINE = windowW/420;
     VERY_THICK_LINE = windowW/320;
 
     frameSize = windowW/15;

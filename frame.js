@@ -27,7 +27,7 @@ class Frame {
 
         this.rect = two.makeRectangle(0, 0, this.size, this.size);
         this.rect.opacity = 0.75;
-        this.rect.linewidth = this.linewidth
+        this.rect.linewidth = this.linewidth;
 
         this.rect_content = two.makeRectangle(0, -(size - this.linewidth)/2, size - this.linewidth, 0);
         this.rect_content.fill = this.color
