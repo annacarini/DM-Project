@@ -124,8 +124,13 @@ class Relation {
 
         this.highlightGroup(this.currentGroup, "highlightersSort");
 
+        // Rendiamo i vecchi higlighters grigi
         for (var i = 0; i < this.highlighters.length; i++)
             this.highlighters[i].stroke = "#c0c0c0";
+        
+        // Andiamo a rimuovere gli higlighters sort e a riaggungerli in modo che vengano disegnati davanti
+        this.group.remove(this.highlightersSort);
+        this.group.add(this.highlightersSort);
     }
 
 
@@ -239,14 +244,13 @@ class Relation {
                 
                 // metti questo come first frame of row
                 firstFrameOfRow = currentFrame;
+                this.group.add(highlighters[highlighters.length - 1]);
             }
             // Se e' l'ultimo elemento del gruppo, disegna l'highlighter
             if (i == group.length - 1) {
                 highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, currentFrame, this[nameHighl + "Color"], this[nameHighl + "Margin"]));
+                this.group.add(highlighters[highlighters.length - 1]);
             }
-
-            // Aggiungiamo l'highlighter appena creato al gruppo della relation
-            this.group.add(highlighters[highlighters.length - 1]);
 
             // metti questo come last frame of row       
             lastFrameOfRow = currentFrame;
@@ -259,8 +263,6 @@ class Relation {
             this.groupHighlighted = groupNode;
         }
         else if (nameHighl == "highlightersSort") {
-            console.log("setting groupHighlightedSort: ");
-            console.log(groupNode);
             this.groupHighlightedSort = groupNode;
         }
 
