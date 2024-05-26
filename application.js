@@ -10,14 +10,15 @@ var relation = null;
 
 const States = {
 	Start: "Start",
-	GroupToSort: "Current group is not sorted",
-	GroupInBuffer: "Current group loaded in buffer, waiting to be sorted",
+	RunToSort: "Current group is not sorted",
+	RunInBuffer: "Current group loaded in buffer, waiting to be sorted",
     BufferSorted: "The buffer is sorted",
     GroupSorted: "Current group is being sorted",
-    GroupToMerge: "Current group has children that must be merge-sorted",
+    RunsToMerge: "Current group has children that must be merge-sorted",
     ChildrenInBuffer: "Children of current group are in the buffer, waiting to be merge-sorted",
     OneEmptyFrameInBuffer: "One empty frame in buffer during merge-sort",
     OutputFrameFullMerging: "Merging, the output frame is full",
+    RunsMerged: "Merged",
     Finish: "Finished"
 }
 
@@ -167,6 +168,7 @@ const Messages = {
     emptyFrameInBuffer: "The buffer has an empty frame. It must load a new page of the corresponding sub-group.",
     bufferContentBeingSorted: "The content of the buffer must be sorted.",
     currentGroupSorted: "The current group has been sorted.",
+    currentGroupMerged: "The current group has been merged.",
     childrenBeingMergeSorted: "A page of each sub-group has been loaded in the buffer. They must be merge-sorted.",
     finished: "Done! The whole relation has been sorted."
 }
@@ -368,6 +370,10 @@ function startSimulation() {
 
     // CREA RELAZIONE
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
+    // Creaimo l'albero e selezioniamo il primo padre di una foglia come gruppo corrente
+    relation.createTree(bufferSize);
+    const notLeaf = relation.getFirstLeaf();
+    relation.currentGroup = notLeaf;
 
     // updates the drawing area and actually renders the content
     two.update();
@@ -542,86 +548,72 @@ function play(time = animTime) {
                 showMessage(Messages.currentGroupFitsInBuffer);
             }
             
+            const frameOldColor = relation.getCurrentGroup().value[0].color;
+            rollback.push([() => {
+                        relation.undoHighlightGroup("highlighters");
+                        relation.changeGroupColor(relation.getCurrentGroup(), frameOldColor);
+                    }, States.Start, "Waiting to start."]);
 
-            rollback.push([() => relation.undoHighlightGroup("highlighters"), States.Start, "Waiting to start."]);
-
+            newColor = relation.generateNewColor();
+            relation.changeGroupColor(relation.getCurrentGroup(), newColor);
             relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
-                applicationState = States.GroupToSort;
+                applicationState = States.RunToSort;
                 callback();
             });
 
             break;
 
-        case States.GroupToSort:
+        case States.RunToSort:
             var currentGroup = relation.getCurrentGroup();
 
-            // Se il gruppo non entra nel buffer, splittalo e rimani in questo stato
-            if (currentGroup.value.length > bufferSize) {
-                var oldColor = currentGroup.value[0].color
-                relation.splitGroup(bufferSize - 1);
-                rollback.push([() => relation.undoSplitGroup(oldColor), States.GroupToSort, textBox.innerHTML])
+            // Leggi il contenuto del primo gruppo e scrivilo nel buffer
+            var frames = relation.readCurrentGroup();
+            // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
+            var start_x = [];
+            var start_y = [];
+            var end_x = [];
+            var end_y = [];
+            var start_size = [];
+            var end_size = [];
+            var color = [];
+            var animationLength = time;
+            for (var i = 0; i < frames.length; i++) {
+                start_x.push(frames[i].x);
+                start_y.push(frames[i].y);
+                let endPos = buffer.getPositionOfFrame(i);
+                end_x.push(endPos[0]);
+                end_y.push(endPos[1]);
+                start_size.push(frames[i].size);
+                end_size.push(frameSize);
+                color.push(frames[i].color);
+            }
 
-                // Questo controllo e' per mostrare il messaggio giusto
-                if (relation.getCurrentGroup().value.length > bufferSize) {
-                    showMessage(Messages.currentGroupDoesNotFit);
-                }
-                else {
-                    showMessage(Messages.currentGroupFitsInBuffer);
-                }
-                
+            rollback.push([() => {
+                relation.undoReadCurrentGroup(frames);
+                buffer.undoWriteOnBuffer();
+                nRead -= frames.length;                    document.getElementById('read-count').textContent = nRead;
+            },
+            States.RunToSort, textBox.innerHTML]);
 
+            tween = animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
+                // Quando terminano le animazioni, scrivi i dati nel buffer
+                buffer.writeOnBuffer(frames);
+                // Aggiorno il numero di read
+                nRead += frames.length;
+                document.getElementById('read-count').textContent = nRead;
+
+                applicationState = States.RunInBuffer;
+                showMessage(Messages.bufferContentBeingSorted);
                 callback();
-            }
-            // Altrimenti, leggi il contenuto del primo gruppo e scrivilo nel buffer
-            else {
-                var frames = relation.readCurrentGroup();
-                // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
-                var start_x = [];
-                var start_y = [];
-                var end_x = [];
-                var end_y = [];
-                var start_size = [];
-                var end_size = [];
-                var color = [];
-                var animationLength = time;
-                for (var i = 0; i < frames.length; i++) {
-                    start_x.push(frames[i].x);
-                    start_y.push(frames[i].y);
-                    let endPos = buffer.getPositionOfFrame(i);
-                    end_x.push(endPos[0]);
-                    end_y.push(endPos[1]);
-                    start_size.push(frames[i].size);
-                    end_size.push(frameSize);
-                    color.push(frames[i].color);
-                }
+            });
 
-                rollback.push([() => {
-                    relation.undoReadCurrentGroup(frames);
-                    buffer.undoWriteOnBuffer();
-                    nRead -= frames.length;
-                    document.getElementById('read-count').textContent = nRead;
-                },
-                States.GroupToSort, textBox.innerHTML]);
-
-                tween = animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
-                    // Quando terminano le animazioni, scrivi i dati nel buffer
-                    buffer.writeOnBuffer(frames);
-                    // Aggiorno il numero di read
-                    nRead += frames.length;
-                    document.getElementById('read-count').textContent = nRead;
-
-                    applicationState = States.GroupInBuffer;
-                    showMessage(Messages.bufferContentBeingSorted);
-                    callback();
-                });
-            }
             break;
 
-        case States.GroupInBuffer:
+        case States.RunInBuffer:
             var oldFramesValues = [];
             for (frame of buffer.frames)
                 oldFramesValues.push(frame.getValues());
-            rollback.push([() => buffer.undoSortAnimation(oldFramesValues), States.GroupInBuffer, textBox.innerHTML]);
+            rollback.push([() => buffer.undoSortAnimation(oldFramesValues), States.RunInBuffer, textBox.innerHTML]);
 
             // Avvia il sort
             tween = buffer.sortAnimation(time / 5, () => {
@@ -650,7 +642,7 @@ function play(time = animTime) {
                 nWrite += frames.length;
                 document.getElementById('write-count').textContent = nWrite;
 
-                applicationState = States.GroupSorted;
+                applicationState = States.RunSorted;
                 showMessage(Messages.currentGroupSorted);
                 callback();
             });
@@ -658,11 +650,11 @@ function play(time = animTime) {
             break;
 
         
-        case States.GroupSorted:
+        case States.RunSorted:
             // Controlla se questo gruppo e' la radice (significa che hai finito tutto)
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
-                rollback.push([() =>  relation.highlightGroup(currentGroup, "highlighters"), States.GroupSorted, textBox.innerHTML]);
+                rollback.push([() =>  relation.highlightGroup(currentGroup, "highlighters"), States.RunSorted, textBox.innerHTML]);
                 applicationState = States.Finish;
                 relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
                 showMessage(Messages.finished);
@@ -675,28 +667,29 @@ function play(time = animTime) {
             }
             // Altrimenti vedi se ha un fratello
             else {
-                var next_sibling = relation.getNextSibling();
+                var next_sibling = relation.getNextLeafParent(relation.getCurrentGroup());
                 // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
                 if (next_sibling == null) {
                     console.log("current group has no siblings left");
-                    rollback.push([() => {relation.undoSetCurrentGroup(-1, buffer.length - 1); buffer.setMode('sort')}, States.GroupSorted, textBox.innerHTML]);
-                    relation.setCurrentGroup(currentGroup.parent);
-                    relation.highlightGroup(null, "highlightersSort");
-                    applicationState = States.GroupToMerge;
+                    rollback.push([() => {relation.undoSetCurrentGroup(); buffer.setMode('sort')}, States.RunSorted, textBox.innerHTML]);
+                    relation.setCurrentGroup(relation.getFirstNotLeaf());
+                    applicationState = States.RunsToMerge;
                     buffer.setMode('merge');
                     showMessage(Messages.childrenMustBeMergeSorted);
                 }
                 else {
-                    var childIndx = relation.getChildIndx(next_sibling);
-                    if (currentGroup.value.length > buffer.length - 1) {
-                        rollback.push([() => relation.undoSetCurrentGroup(childIndx - 1, buffer.length - 1), States.GroupSorted, textBox.innerHTML]);
-                        relation.setCurrentGroup(next_sibling);
-                    }
-                    else {
-                        rollback.push([() => relation.undoSetCurrentGroupToSort(childIndx - 1), States.GroupSorted, textBox.innerHTML]);
-                        relation.setCurrentGroupToSort(next_sibling);
-                    }
-                    applicationState = States.GroupToSort;
+                    relation.setCurrentGroup(next_sibling);
+                    const frameOldColor = relation.getCurrentGroup().value[0].color;
+
+                    rollback.push([() => {
+                            relation.changeGroupColor(relation.getCurrentGroup(), frameOldColor);
+                            relation.undoSetCurrentGroup();
+                        }, States.RunSorted, textBox.innerHTML]);
+
+                    newColor = relation.generateNewColor();
+                    relation.changeGroupColor(relation.getCurrentGroup(), newColor);
+                    applicationState = States.RunToSort;
+
                     // Questo controllo e' per mostrare il messaggio giusto
                     if (relation.getCurrentGroup().value.length > bufferSize) {
                         showMessage(Messages.currentGroupDoesNotFit);
@@ -709,8 +702,12 @@ function play(time = animTime) {
                 callback();
             }
             break;
-        
-        case States.GroupToMerge:
+
+        case States.RunsNotToMerge:
+            var currentGroup = relation.getCurrentGroup();
+
+
+        case States.RunsToMerge:
             var currentGroup = relation.getCurrentGroup();
 
             // Prendi tutti i siblings
@@ -914,15 +911,16 @@ function play(time = animTime) {
             for (var i = 0; i < oldIndices.length; i++) {
                 oldIndices[i].shift()
             }
+            console.log("OLD INDICES", oldIndices);
             rollback.push([() => {
                 buffer.undoFlushOutputFrame(oldBufferValues);
-                if (buffer.mode != 'merge')
-                    buffer.setMode('merge');
-                if (!buffer.bufferContainsSomething())
+                if (!buffer.bufferContainsSomething()) {
                     relation.undoMergeChildren(oldIndices);
+                }
                 relation.undoWriteWithAnimation(freeAvailableFrame, oldIndices);
                 nWrite -= 1;
                 document.getElementById('write-count').textContent = nWrite;
+                console.log(relation.relation);
             }, States.OutputFrameFullMerging, textBox.innerHTML]);
             /****************************/
 
@@ -939,20 +937,70 @@ function play(time = animTime) {
                 nWrite += 1;
                 document.getElementById('write-count').textContent = nWrite;
 
-                // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a GroupSorted
+                // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a RunSorted
                 if (buffer.bufferContainsSomething()) {
                     console.log("buffer still contains something");
                     applicationState = States.ChildrenInBuffer;
                     showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
+                    // Se non c'è il padre terminiamo. Se c'è allora prendiamo il prossimo nodo alla stessa profondità
                     relation.mergeChildren();
-                    buffer.setMode('sort');
-                    applicationState = States.GroupSorted;
-                    showMessage(Messages.currentGroupSorted);
+                    if (!currentGroup.parent) {
+                        applicationState = States.Finish;
+                        showMessage(Messages.finished);
+                    }
+                    else {
+                        applicationState = States.RunsMerged;
+                        showMessage(Messages.currentGroupSorted);
+                    }
                 }
                 callback();
             });
+            break;
+
+        case States.RunsMerged:
+
+            rollback.push([() => {
+                var currentGroup = relation.getCurrentGroup();
+                // Se il gruppo corrente è anche il primo singifica che siamo passati al layer superiore. Dobbiamo ritornare a quello inferiore
+                // e quindi prendere come nodo l'ultimo a destra che sia una foglia.
+                // In caso contrario prendiamo il parente a sinistra.
+                if (currentGroup == relation.getFirstNotLeaf())
+                    relation.setCurrentGroup(relation.getLastLeaf());
+                else
+                    relation.setCurrentGroup(relation.getPreviousLeafParent(currentGroup));
+                console.log("Il nuovo gruppo")
+                // Se il nuovo gruppo corrente ha un numero di valori uguali a quello del buffer size significa che prima non c'è stato alcun merge
+                // grafico, ma logico (lato codice).
+                if (relation.getCurrentGroup().value.length == bufferSize) {
+                    const oldIndex = [];
+                    for (var i = 0; i < relation.getCurrentGroup().value.length; i++)
+                        oldIndex.push([0, i, i]);
+                    relation.undoMergeChildren(oldIndex);
+                }
+            }, States.RunsMerged, textBox.innerHTML]);
+
+            // Cerco il prossimo nodo da mergiare. Se è nullo quello a destra
+            // questo significa che devo prendere il primo nodo all'estrema sinistra. Cioè sto iniziando una nuova ****
+            var nextNode = relation.getNextLeafParent(relation.getCurrentGroup());
+            if (!nextNode) {
+                nextNode = relation.relation;
+                while (nextNode.children.length)
+                    nextNode = nextNode.children[0];
+            }
+            nextNode = nextNode.parent;
+            relation.setCurrentGroup(nextNode);
+            // Se il prossimo nodo ha un singolo figlio sinfica che non deve fare merge, è gia mergiato!
+            if (nextNode.children.length == 1) {
+                relation.mergeChildren();
+                applicationState = States.RunsMerged;
+            }
+            else
+                applicationState = States.RunsToMerge;
+            showMessage(Messages.currentGroupMerged);
+            callback();
+
             break;
 
         case States.Finish:

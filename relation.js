@@ -119,6 +119,46 @@ class Relation {
     }
 
 
+    // Trasforma la relation in una struttura ad albero in cui ogni foglia ha la stessa profondità.
+    // Parte dividendo i frame in NFrames / M run. Ogni run è un nodo avente M figli (i frames).
+    // Prendiamo tutte le run e raggruppiamole in NRuns / M - 1 new_runs. Ogni new_run è un nodo avente
+    // come figli le run. Procedere fino a quando non si abbia una sola new_run
+    createTree(bufferSize) {
+        var treeDemo = [];
+
+        treeDemo.push([]);
+        var node = null;
+        // Sort fase - Raggruppiamo i frame in run da lunghezza di bufferSize 
+        for (var i = 0; i < this.relation.value.length; i++) {
+            if (i % bufferSize == 0)
+                node = new TreeNode([]);
+            node.value.push(this.relation.value[i]);
+            this.relation.value[i].parent = node;
+            if ((i + 1) % bufferSize == 0 || (i + 1) == this.relation.value.length)
+                treeDemo[0].push(node);
+        }
+        // Merge fase - Raggruppiamo le run in gruppi da M - 1 runs
+        var lastLayer = treeDemo[treeDemo.length - 1];
+        while(lastLayer.length != 1) {
+            treeDemo.push([]);
+            for (var i = 0; i < lastLayer.length; i++) { // Leggo tutti i nodi nel lastLayer
+                if (i % (bufferSize - 1) == 0)  // Se i è un multiplo di bufferSize - 1 allora devo creare un nuovo gruppo a cui apparterrano i nodi seguenti
+                    node = new TreeNode([]);
+                node.children.push(lastLayer[i]);
+                lastLayer[i].parent = node;
+                if ((i + 1) % (bufferSize - 1) == 0 || (i + 1) ==  lastLayer.length) // Alla prossima iterazione creo un nuovo node. Allora pusho quello attuale
+                    treeDemo[treeDemo.length - 1].push(node);
+            }
+            lastLayer = treeDemo[treeDemo.length - 1];
+        }
+        // Creiamo l'ultimo nodo che sarà l'origine dell'albero. Aggiungiamo i figli e cambiamo il padre a questi figli
+        this.relation = new TreeNode([]);
+        this.relation.children = lastLayer[0].children;
+        for (var i = 0; i < lastLayer[0].children.length; i++)
+            lastLayer[0].children[i].parent = this.relation;
+    }
+
+
     setCurrentGroupToSort(group) {
         this.currentGroup = group;
 
@@ -147,6 +187,52 @@ class Relation {
     }
 
 
+    // Cerca nell'albero la foglia più a sinistra
+    getFirstLeaf() {
+        var group = this.relation;
+        while (group.children.length > 0) {
+            group = group.children[0];
+        }
+        return group;
+    }
+
+
+    // Cerca nell'albero la foglia più a destra
+    getLastLeaf() {
+        var group = this.relation;
+        while (group.children.length > 0) {
+            group = group.children[group.children.length - 1];
+        }
+        return group;
+    }
+
+
+    // Cerca nell'albero il nodo più a sinistra che sia padre di una foglia
+    getFirstNotLeaf() {
+        var group = this.relation;
+        while (group.children.length > 0) {
+            if (group.children[0].children.length > 0)
+                group = group.children[0];
+            else
+                return group;
+        }
+        return group;
+    }
+
+
+    // Cerca nell'albero il nodo più a destra che sia padre di una foglia
+    getLastNotLeaf() {
+        var group = this.relation;
+        while (group.children.length > 0) {
+            if (group.children[group.children.length - 1].children.length > 0)
+                group = group.children[group.children.length - 1];
+            else
+                return group;
+        }
+        return group;
+    }
+
+
     getCurrentGroup() {
         return this.currentGroup;
     }
@@ -165,6 +251,42 @@ class Relation {
             }
         }
         return null;
+    }
+
+
+    getNextLeafParent(node) {
+        if (node.parent == null) return null;
+
+        var siblings = node.parent.children;
+        for (var i = 0; i < siblings.length; i++) {
+            // se trovi currentGroup e non e' l'ultimo sibling
+            if (siblings[i] == node && i < siblings.length - 1) {
+                var next = siblings[i + 1];
+                while (next.children.length)
+                    next = next.children[0];
+                return next;
+            }
+        }
+
+        return this.getNextLeafParent(node.parent);
+    }
+
+
+    getPreviousLeafParent(node) {
+        if (node.parent == null) return null;
+
+        var siblings = node.parent.children;
+        for (var i = siblings.length - 1; i >= 0; i--) {
+            // se trovi currentGroup e non e' l'ultimo sibling
+            if (siblings[i] == node && i > 0) {
+                var prev = siblings[i - 1];
+                while (prev.children.length)
+                    prev = prev.children[prev.children.length - 1];
+                return prev;
+            }
+        }
+
+        return this.getPreviousLeafParent(node.parent);
     }
 
 
@@ -1047,27 +1169,31 @@ class Relation {
     }
 
 
-    // Se il vecchio gruppo aveva come parente il gruppo corrente significa che era un suo figlio.
-    // Se il numero di frame che aveva era uguale o inferiore a limit (il numero di frame nel buffer - 1)
-    // ciò significa che era nella fase di sorting e che quindi aveva il bordo grigio.
-    undoSetCurrentGroup(indx, limit) {
+    // Se il gruppo corrente non ha un padre significa che non c'è nessun altro gruppo oltre a quello attuale, quindi quello precedente è null
+    // In caso contrario cerco il primo nodo che si trovi a sinistra del mio che non abbia un figlio, quello era il nodo selezionato
+    // Se getPrevoiusLeafParent è null significa che il nodo è l'ultimo a destra nell'albero (else)
+    undoSetCurrentGroup() {
 
         console.log("UNDO SET CURRENT GROUP");
 
-        if (indx == -1) {
-            var newGroup = this.currentGroup.children[this.currentGroup.children.length - 1];
-            var sum = 0;
-            for (var i = 0; i < this.currentGroup.children.length; i++)
-                sum += this.currentGroup.children[i].value.length;
-            if (sum <= limit * this.currentGroup.children.length) {
-                this.highlightGroup(this.currentGroup, "highlighters");
-                this.setCurrentGroupToSort(newGroup);
-            }
-            else
-                this.setCurrentGroup(newGroup);
+        const currGroup = this.getCurrentGroup();
+        
+        if (!currGroup.parent) {
+            this.setCurrentGroup(null);
+            return;
         }
-        else
-            this.setCurrentGroup(this.currentGroup.parent.children[indx]);    
+
+        var prev = this.getPreviousLeafParent(currGroup);
+        console.log("PREV", prev);
+        if (prev != null)
+            this.setCurrentGroup(prev);
+        else {
+            prev = this.relation;
+            while (prev.children.length) {
+                prev = prev.children[prev.children.length - 1];
+            }
+            this.setCurrentGroup(prev);
+        }   
     }
 
 
@@ -1150,9 +1276,6 @@ class Relation {
     undoMergeChildren(oldGroups) {
 
         console.log("UNDO MERGE CHILDREN");
-
-        console.log("Gli oldGroups sono", oldGroups);
-        console.log("I frames sono", this.currentGroup.value);
 
         var frames = this.currentGroup.value;
         this.currentGroup.value = [];
