@@ -410,7 +410,11 @@ function reset() {
     relation.group.remove();    
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
-    
+    // Creaimo l'albero e selezioniamo il primo padre di una foglia come gruppo corrente
+    relation.createTree(bufferSize);
+    const notLeaf = relation.getFirstLeaf();
+    relation.currentGroup = notLeaf;
+
     // Imposta scritte misura buffer e relazione
     document.getElementById("buffer_size_text").innerHTML = "M = " + bufferSize;
     document.getElementById("relation_size_text").innerHTML = "B(R) = " + relationSize;
@@ -961,26 +965,6 @@ function play(time = animTime) {
 
         case States.RunsMerged:
 
-            rollback.push([() => {
-                var currentGroup = relation.getCurrentGroup();
-                // Se il gruppo corrente è anche il primo singifica che siamo passati al layer superiore. Dobbiamo ritornare a quello inferiore
-                // e quindi prendere come nodo l'ultimo a destra che sia una foglia.
-                // In caso contrario prendiamo il parente a sinistra.
-                if (currentGroup == relation.getFirstNotLeaf())
-                    relation.setCurrentGroup(relation.getLastLeaf());
-                else
-                    relation.setCurrentGroup(relation.getPreviousLeafParent(currentGroup));
-                console.log("Il nuovo gruppo")
-                // Se il nuovo gruppo corrente ha un numero di valori uguali a quello del buffer size significa che prima non c'è stato alcun merge
-                // grafico, ma logico (lato codice).
-                if (relation.getCurrentGroup().value.length == bufferSize) {
-                    const oldIndex = [];
-                    for (var i = 0; i < relation.getCurrentGroup().value.length; i++)
-                        oldIndex.push([0, i, i]);
-                    relation.undoMergeChildren(oldIndex);
-                }
-            }, States.RunsMerged, textBox.innerHTML]);
-
             // Cerco il prossimo nodo da mergiare. Se è nullo quello a destra
             // questo significa che devo prendere il primo nodo all'estrema sinistra. Cioè sto iniziando una nuova ****
             var nextNode = relation.getNextLeafParent(relation.getCurrentGroup());
@@ -990,6 +974,30 @@ function play(time = animTime) {
                     nextNode = nextNode.children[0];
             }
             nextNode = nextNode.parent;
+
+            const nChildren = nextNode.children.length;
+            console.log("Prima del push:", nChildren);
+            console.log("Il tree node: ", nextNode);
+            rollback.push([() => {
+                // Se il nuovo gruppo corrente ha un numero di valori uguali a quello del buffer size significa che prima non c'è stato alcun merge
+                // grafico, ma logico (lato codice).
+                console.log("Il numero di children: ", nChildren);
+                if (nChildren == 1) {
+                    const oldIndex = [];
+                    for (var i = 0; i < relation.getCurrentGroup().value.length; i++)
+                        oldIndex.push([0, i, i]);
+                    relation.undoMergeChildren(oldIndex);
+                }
+                var currentGroup = relation.getCurrentGroup();
+                // Se il gruppo corrente è anche il primo singifica che siamo passati al layer superiore. Dobbiamo ritornare a quello inferiore
+                // e quindi prendere come nodo l'ultimo a destra che sia una foglia.
+                // In caso contrario prendiamo il parente a sinistra.
+                if (currentGroup == relation.getFirstNotLeaf())
+                    relation.setCurrentGroup(relation.getLastLeaf());
+                else
+                    relation.setCurrentGroup(relation.getPreviousLeafParent(currentGroup));
+            }, States.RunsMerged, textBox.innerHTML]);
+
             relation.setCurrentGroup(nextNode);
             // Se il prossimo nodo ha un singolo figlio sinfica che non deve fare merge, è gia mergiato!
             if (nextNode.children.length == 1) {
