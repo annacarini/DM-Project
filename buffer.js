@@ -17,9 +17,6 @@ class Buffer {
         this.linewidth = THICK_LINE;
         this.outputFrameColor = "rgb(210, 210, 210)";
 
-        this.sortingStatus = 0;
-        this._virtualFrames = Array(length, []);
-        this._virtualOutputFrame = [];
         this.frameRefilled = Array(MAX_ELEMENTS_PER_FRAME, false);
         this.framesToRefill = [];
 
@@ -106,18 +103,6 @@ class Buffer {
 
     /***************** OPERAZIONI DI CHECK ***************************/
 
-    // Controlla se non ci sono più elementi nel buffer (output escluso)
-    // True: il buffer non contiene più elementi
-    // False: il buffer contiene elementi
-    checkEmptiness() {
-        for (var i = 0; i < this.frames.length; i++) {
-            if (this.frames[i].getValues().length)
-                return false
-        }
-        return true
-    }
-
-
     // Restituisce true se c'e' qualcosa dentro il buffer (escluso output frame), false se e' tutto vuoto
     bufferContainsSomething() {
         var res = false;
@@ -160,7 +145,6 @@ class Buffer {
         for (var i = 0; i < frames.length; i++) {
             var frame = frames[i];
             this.frames[i].copy(frame);
-            this._virtualFrames[i] = frame.elements;
             this.frameRefilled[i] = frame.toRefill;
         }
 
@@ -293,18 +277,17 @@ class Buffer {
     }
 
 
-    mergeAnimation(time = 200, sortCallback = () => {}, mergeCallback = () => {}) {
+    mergeAnimation(time = 200, outputFullCallback = () => {}, emptyFrameCallback = () => {}) {
         this.merge();
         var tween = new TWEEN.Tween(null).to(null, time).onComplete( () => {
-                this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2);
                 this.framesToRefill = this.checkToRefill();
                 if (this.framesToRefill.length) {
                     for (var i = 0; i < this.framesToRefill.length; i++)
                         this.frameRefilled[this.framesToRefill[i]] = false;
-                    mergeCallback();
+                    emptyFrameCallback();
                 }
                 else
-                    sortCallback();
+                    outputFullCallback();
             }
         )
         tween.start();
