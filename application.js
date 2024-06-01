@@ -159,17 +159,18 @@ function createCustomTexture(width, height, backgroundColor, barColor, barWidth,
 
 // MESSAGGI
 const Messages = {
-	currentGroupMustBeSorted: "The current group must be sorted.",
-    currentGroupDoesNotFit: "The current group doesn't fit in the buffer, so it must be split.",
-    currentGroupFitsInBuffer: "The current group fits in the buffer, so it will be copied there.",
-    childrenMustBeMergeSorted: "These sub-groups have been individually sorted, now they must be merged.",
+	currentGroupMustBeSorted: "The current run must be sorted.",
+    currentGroupDoesNotFit: "The current run doesn't fit in the buffer, so it must be split.",
+    currentGroupFitsInBuffer: "The current run fits in the buffer, so it will be copied there.",
+    childrenMustBeMergeSorted: "These runs have been individually sorted, now they must be merged.",
     bufferSorted: "The buffer is sorted, its frames must be written back in the relation.",
     outputFrameFull: "The output frame is full, so it must be written back in the relation.",
-    emptyFrameInBuffer: "The buffer has an empty frame. It must load a new page of the corresponding sub-group.",
+    emptyFrameInBuffer: "The buffer has an empty frame. It must load a new page of the corresponding run.",
     bufferContentBeingSorted: "The content of the buffer must be sorted.",
-    currentGroupSorted: "The current group has been sorted.",
-    currentGroupMerged: "The current group has been merged.",
-    childrenBeingMergeSorted: "A page of each sub-group has been loaded in the buffer. They must be merge-sorted.",
+    currentGroupSorted: "The current run has been sorted.",
+    currentGroupMerged: "The current run has been merged.",
+    runNotToBeMerged: "This run doesn't have other runs to merge with for now.",
+    childrenBeingMergeSorted: "A page of each run has been loaded in the buffer. They must be merge-sorted.",
     finished: "Done! The whole relation has been sorted."
 }
 
@@ -529,6 +530,8 @@ function undo() {
 
     showMessageBoxContent(true);
     console.log("text box content: ", textBox.innerHTML);
+    console.log("Il nuovo stato è: ", applicationState);
+    console.log("La relazione è: ", relation);
 }
 
 
@@ -951,20 +954,25 @@ function play(time = animTime) {
                 else {
                     // Se non c'è il padre terminiamo. Se c'e' allora prendiamo il prossimo nodo alla stessa profondita'
                     relation.mergeChildren();
-                    if (!currentGroup.parent) {
-                        applicationState = States.Finish;
-                        showMessage(Messages.finished);
-                    }
-                    else {
-                        applicationState = States.RunsMerged;
-                        showMessage(Messages.currentGroupSorted);
-                    }
+                    applicationState = States.RunsMerged;
+                    showMessage(Messages.currentGroupSorted);
                 }
                 callback();
             });
             break;
 
         case States.RunsMerged:
+
+            currentGroup = relation.getCurrentGroup();
+            // Se non c'è il padre abbiamo finito
+            if (!currentGroup.parent) {
+                rollback.push([() => relation.setCurrentGroup(currentGroup), States.RunsMerged, textBox.innerHTML]);
+                applicationState = States.Finish;
+                showMessage(Messages.finished);
+                relation.setCurrentGroup(null);
+                callback();
+                break;
+            }
 
             // Cerco il prossimo nodo da mergiare. Se è nullo quello a destra
             // questo significa che devo prendere il primo nodo all'estrema sinistra. Cioè sto iniziando una nuova ****
@@ -976,13 +984,11 @@ function play(time = animTime) {
             }
             nextNode = nextNode.parent;
 
+            // UNDO
             const nChildren = nextNode.children.length;
-            console.log("Prima del push:", nChildren);
-            console.log("Il tree node: ", nextNode);
             rollback.push([() => {
                 // Se il nuovo gruppo corrente ha un numero di valori uguali a quello del buffer size significa che prima non c'è stato alcun merge
                 // grafico, ma logico (lato codice).
-                console.log("Il numero di children: ", nChildren);
                 if (nChildren == 1) {
                     const oldIndex = [];
                     for (var i = 0; i < relation.getCurrentGroup().value.length; i++)
@@ -999,15 +1005,18 @@ function play(time = animTime) {
                     relation.setCurrentGroup(relation.getPreviousLeafParent(currentGroup));
             }, States.RunsMerged, textBox.innerHTML]);
 
+            // MOVE TO NEXT STATE
             relation.setCurrentGroup(nextNode);
             // Se il prossimo nodo ha un singolo figlio sinfica che non deve fare merge, è gia mergiato!
             if (nextNode.children.length == 1) {
                 relation.mergeChildren();
                 applicationState = States.RunsMerged;
+                showMessage(Messages.runNotToBeMerged);
             }
-            else
+            else {
                 applicationState = States.RunsToMerge;
-            showMessage(Messages.currentGroupMerged);
+                showMessage(Messages.currentGroupMerged);
+            }
             callback();
 
             break;
@@ -1025,8 +1034,6 @@ function play(time = animTime) {
         default:
             break;
     }
-
-    console.log("I'm in state: " + applicationState);
 }
 
 
@@ -1056,6 +1063,9 @@ function endTween(tween) {
 
 
 async function callback() {
+
+    console.log("Lo stato dell'applicazione: ", applicationState)
+
     playing = false;    // per dire che l'esecuzione attuale e' terminata
 
     // Se non e' attiva la riproduzione automatica, mostra la message box, altrimenti nascondila
