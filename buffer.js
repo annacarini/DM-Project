@@ -53,8 +53,11 @@ class Buffer {
     }
 
 
-    getSorting() {
-        return this.sorting
+    /******************************* GET-SET **********************/
+
+    getPositionOfFrame(index) {
+        if (index >= this.length) return null;
+        return [this.frames[index].x, this.frames[index].y];
     }
 
 
@@ -101,46 +104,6 @@ class Buffer {
     }
 
 
-    // Ritorna l'indice del frame dove è contenuto il valore più basso in tutto il buffer(output escluso)
-    // Ritorna anche l'indice del valore all'interno del frame
-    _findMin() {
-        var frameIndx = 0
-        var indx = 0
-        var min = Infinity
-
-        for (var i = 0; i < this.frames.length; i++) {
-            var ret = this.frames[i].findMin()
-            var fMin = ret[0]
-            var fIndx = ret[1]
-            if (fMin < min) {
-                min = fMin
-                indx = fIndx
-                frameIndx = i
-            }
-        }
-        return [frameIndx, indx]
-    }
-
-
-    _virtualFindMin() {
-        var frameIndx = 0
-        var indx = 0
-        var min = Infinity
-
-        for (var i = 0; i < this._virtualFrames.length; i++) {
-            var frame = this._virtualFrames[i]
-            for (var j = 0; j < frame.length; j++) {
-                if (frame[j] < min) {
-                    min = frame[j]
-                    indx = j
-                    frameIndx = i
-                }
-            }
-        }
-        return [frameIndx, indx]
-    }
-
-
     /***************** OPERAZIONI DI CHECK ***************************/
 
     // Controlla se non ci sono più elementi nel buffer (output escluso)
@@ -152,6 +115,19 @@ class Buffer {
                 return false
         }
         return true
+    }
+
+
+    // Restituisce true se c'e' qualcosa dentro il buffer (escluso output frame), false se e' tutto vuoto
+    bufferContainsSomething() {
+        var res = false;
+        for (var i = 0; i < this.frames.length; i++) {
+            if (this.frames[i].elements.length > 0) {
+                res = true;
+                break;
+            }
+        }
+        return res;
     }
 
 
@@ -177,8 +153,8 @@ class Buffer {
         return false
     }
 
-    /***********************************************************/
 
+    /******************************** WRITE-READ *************************/
 
     writeOnBuffer(frames, callback=null) {
         for (var i = 0; i < frames.length; i++) {
@@ -195,7 +171,6 @@ class Buffer {
 
     writeOnBufferFrame(frame, indx, callback = null) {
         this.frames[indx].copy(frame)
-        console.log("Il frame: ", indx, " da refillare?: ", frame.toRefill)
         this.frameRefilled[indx] = frame.toRefill;
         if (callback != null) callback();
     }
@@ -211,35 +186,44 @@ class Buffer {
     }
 
 
-    // Crea e ritorna una catena di animazioni che rimuove un elemento e poi lo scrive nel buffer
-    writeFromToAnimation(frameIndx, indx) {
-        var frame = this.frames[frameIndx]
-        var value = this.frames[frameIndx].getValue(indx)
-
-        const removeTweens = frame.removeElementAnimation(indx, 1000)
-        const waitTweens = new TWEEN.Tween(null).to(null, 200)
-        const addTweens = this.outputFrame.addElementAnimation(value, 500)
-        removeTweens[removeTweens.length - 1].chain(waitTweens)
-        waitTweens.chain(addTweens[0])
-
-        return [removeTweens[0], addTweens[addTweens.length - 1]]
+    // Restituisce il contenuto dell'output frame e lo svuota
+    flushOutputFrame() {
+        var res = {
+            x: this.outputFrame.x,
+            y: this.outputFrame.y,
+            size: this.outputFrame.realSize(),
+            color: this.outputFrame.color,
+            elements: this.outputFrame.getValues(),
+            sorted: this.outputFrame.sorted
+        }
+        this.outputFrame.resetFrame();
+        return res;
     }
 
 
-    writeFromOutputToMain() {
-        this.outputFrame.resetFrame()
-        this._virtualOutputFrame = []
+    // Restituisce il contenuto di tutto il buffer e lo svuota
+    clear() {
+        var res = [];
+        for (var frame of this.frames) {
+            var frameInfo = {
+                x: frame.x,
+                y: frame.y,
+                size: frame.realSize(),
+                color: frame.color,
+                elements: frame.getValues(),
+                sorted: frame.sorted
+            }
+            if (frameInfo.elements.length)
+                res.push(frameInfo);
+            frame.resetFrame();
+        }
+        return res;
     }
 
 
-    _virtualWriteFromToAnimation(frameIndx, indx) {
-        var value = this._virtualFrames[frameIndx][indx]
+    /*********************** SORT-MERGE********************/
 
-        this._virtualFrames[frameIndx].splice(indx, 1)
-        this._virtualOutputFrame.push(value)
-    }
-
-
+    // Da commentare
     _findLastValues(n) {
         var values = []
         for (var i = 0; i < this.frames.length; i++) {
@@ -252,7 +236,6 @@ class Buffer {
                 values.splice(m, 0, [newValue, j, i])
             }
         }
-
         return values.slice(0, n)
     }
 
@@ -267,15 +250,21 @@ class Buffer {
             frame.resetFrame();
             frame.setSorted(true);
         }
-        console.log("LA LISTA E'", list);
         list.sort((a, b) => a - b);
-        console.log("LA LISTA E'", list);
 
         // Inserisco nei frames i nuovi valori ordinati
         for (var i = 0; i < list.length; i++) {
             this.frames[Math.floor(i / MAX_ELEMENTS_PER_FRAME)].addElement(list[i]);
         }
         
+    }
+
+
+    sortAnimation(time = 200, callback = () => {}) {
+        this.sort();
+        var tween = new TWEEN.Tween(null).to(null, time).onComplete(() => {callback()})
+        tween.start();
+        return tween;
     }
 
 
@@ -304,31 +293,6 @@ class Buffer {
     }
 
 
-    sortStepAnimation(callback = () => {}) {
-        this.sortingStatus = this.checkEmptiness() + (this.checkFullOutput() * 2)
-        if (this.sortingStatus == 0) {
-            var ret = this._findMin()
-            var frameIndx = ret[0]
-            var indx = ret[1]
-
-            var tweens = this.writeFromToAnimation(frameIndx, indx)
-            var onComplete = tweens[1]._onCompleteCallback
-            tweens[1].onComplete(() => {onComplete(); callback})
-            tweens[0].start()
-        }
-        else
-            callback()
-    }
-
-    
-    sortAnimation(time = 200, callback = () => {}) {
-        this.sort();
-        var tween = new TWEEN.Tween(null).to(null, time).onComplete(() => {callback()})
-        tween.start();
-        return tween;
-    }
-
-
     mergeAnimation(time = 200, sortCallback = () => {}, mergeCallback = () => {}) {
         this.merge();
         var tween = new TWEEN.Tween(null).to(null, time).onComplete( () => {
@@ -349,60 +313,8 @@ class Buffer {
     }
 
 
-    getPositionOfFrame(index) {
-        if (index >= this.length) return null;
-        return [this.frames[index].x, this.frames[index].y];
-    }
-
-
-    // Restituisce il contenuto dell'output frame e lo svuota
-    flushOutputFrame() {
-        var res = {
-            x: this.outputFrame.x,
-            y: this.outputFrame.y,
-            size: this.outputFrame.realSize(),
-            color: this.outputFrame.color,
-            elements: this.outputFrame.getValues(),
-            sorted: this.outputFrame.sorted
-        }
-        this.outputFrame.resetFrame();
-        return res;
-    }
-
-    // Restituisce il contenuto di tutto il buffer e lo svuota
-    clear() {
-        var res = [];
-        for (var frame of this.frames) {
-            var frameInfo = {
-                x: frame.x,
-                y: frame.y,
-                size: frame.realSize(),
-                color: frame.color,
-                elements: frame.getValues(),
-                sorted: frame.sorted
-            }
-            if (frameInfo.elements.length)
-                res.push(frameInfo);
-            frame.resetFrame();
-        }
-        return res;
-    }
-
-    // Restituisce true se c'e' qualcosa dentro il buffer (escluso output frame), false se e' tutto vuoto
-    bufferContainsSomething() {
-        var res = false;
-        for (var i = 0; i < this.frames.length; i++) {
-            if (this.frames[i].elements.length > 0) {
-                res = true;
-                break;
-            }
-        }
-        return res;
-    }
-
-
-
     /****************** REDRAW per quando cambia la dimensione della finestra *****************/
+
     redrawBuffer(x, y) {
 
         var totalWidth = this.length*frameSize + (this.length - 1)*this.spaceBetween;
@@ -447,7 +359,9 @@ class Buffer {
         
     }
     
+
     /****************** UNDO *****************/
+
     undoWriteOnBuffer() {
         for (var i = 0; i < this.frames.length; i++) {
             this.frames[i].resetFrame();
@@ -476,6 +390,7 @@ class Buffer {
             this.frameRefilled[this.framesToRefill[i]] = true;
         this.framesToRefill = [];
     }
+
 
     undoFlushOutputFrame(oldValues) {
         this.outputFrame.resetFrame();
