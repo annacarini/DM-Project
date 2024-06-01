@@ -159,16 +159,14 @@ function createCustomTexture(width, height, backgroundColor, barColor, barWidth,
 
 // MESSAGGI
 const Messages = {
-	currentGroupMustBeSorted: "The current run must be sorted.",
-    currentGroupDoesNotFit: "The current run doesn't fit in the buffer, so it must be split.",
-    currentGroupFitsInBuffer: "The current run fits in the buffer, so it will be copied there.",
+	currentGroupMustBeSorted: 'This run must be sorted.<br/>It will be written in the buffer.',
     childrenMustBeMergeSorted: "These runs have been individually sorted, now they must be merged.",
     bufferSorted: "The buffer is sorted, its frames must be written back in the relation.",
     outputFrameFull: "The output frame is full, so it must be written back in the relation.",
     emptyFrameInBuffer: "The buffer has an empty frame. It must load a new page of the corresponding run.",
     bufferContentBeingSorted: "The content of the buffer must be sorted.",
-    currentGroupSorted: "The current run has been sorted.",
-    currentGroupMerged: "The current run has been merged.",
+    currentGroupSorted: "This run has been sorted.",
+    currentGroupMerged: "These runs have been merged.",
     runNotToBeMerged: "This run doesn't have other runs to merge with for now.",
     childrenBeingMergeSorted: "A page of each run has been loaded in the buffer. They must be merge-sorted.",
     finished: "Done! The whole relation has been sorted."
@@ -547,13 +545,7 @@ function play(time = animTime) {
     switch (applicationState) {
         
         case States.Start:
-            // Questo controllo e' per mostrare il messaggio giusto
-            if (relation.getCurrentGroup().value.length > bufferSize) {
-                showMessage(Messages.currentGroupDoesNotFit);
-            }
-            else {
-                showMessage(Messages.currentGroupFitsInBuffer);
-            }
+            showMessage(Messages.currentGroupMustBeSorted);
             
             // UNDO
             const frameOldColor = relation.getCurrentGroup().value[0].color;
@@ -710,7 +702,7 @@ function play(time = animTime) {
                     applicationState = States.RunToSort;
 
                     // Mostra il messaggio
-                    showMessage(Messages.currentGroupFitsInBuffer);
+                    showMessage(Messages.currentGroupMustBeSorted);
                     
                 }
                 callback();
@@ -955,7 +947,7 @@ function play(time = animTime) {
                     // Se non c'è il padre terminiamo. Se c'e' allora prendiamo il prossimo nodo alla stessa profondita'
                     relation.mergeChildren();
                     applicationState = States.RunsMerged;
-                    showMessage(Messages.currentGroupSorted);
+                    showMessage(Messages.currentGroupMerged);
                 }
                 callback();
             });
@@ -1015,7 +1007,7 @@ function play(time = animTime) {
             }
             else {
                 applicationState = States.RunsToMerge;
-                showMessage(Messages.currentGroupMerged);
+                showMessage(Messages.childrenMustBeMergeSorted);
             }
             callback();
 

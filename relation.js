@@ -130,13 +130,14 @@ class Relation {
         var node = null;
         // Sort fase - Raggruppiamo i frame in run da lunghezza di bufferSize 
         for (var i = 0; i < this.relation.value.length; i++) {
-            if (i % bufferSize == 0)
+            if (i % bufferSize == 0) {
                 node = new TreeNode([]);
+                treeDemo[0].push(node);
+            }
             node.value.push(this.relation.value[i]);
             this.relation.value[i].parent = node;
-            if ((i + 1) % bufferSize == 0 || (i + 1) == this.relation.value.length)
-                treeDemo[0].push(node);
         }
+
         // Merge fase - Raggruppiamo le run in gruppi da M - 1 runs
         var lastLayer = treeDemo[treeDemo.length - 1];
         while(lastLayer.length != 1) {
