@@ -10,11 +10,11 @@ var relation = null;
 
 const States = {
 	Start: "Start",
-	RunToSort: "Current group is not sorted",
-	RunInBuffer: "Current group loaded in buffer, waiting to be sorted",
+	RunToSort: "Current run is not sorted",
+	RunInBuffer: "Current run loaded in buffer, waiting to be sorted",
     BufferSorted: "The buffer is sorted",
-    GroupSorted: "Current group is being sorted",
-    RunsToMerge: "Current group has children that must be merge-sorted",
+    RunSorted: "Current run is being sorted",
+    RunsToMerge: "Current run has children that must be merge-sorted",
     ChildrenInBuffer: "Children of current group are in the buffer, waiting to be merge-sorted",
     OneEmptyFrameInBuffer: "One empty frame in buffer during merge-sort",
     OutputFrameFullMerging: "Merging, the output frame is full",
@@ -552,12 +552,14 @@ function play(time = animTime) {
                 showMessage(Messages.currentGroupFitsInBuffer);
             }
             
+            // UNDO
             const frameOldColor = relation.getCurrentGroup().value[0].color;
             rollback.push([() => {
-                        relation.undoHighlightGroup("highlighters");
-                        relation.changeGroupColor(relation.getCurrentGroup(), frameOldColor);
-                    }, States.Start, "Waiting to start."]);
+                    relation.undoHighlightGroup("highlighters");
+                    relation.changeGroupColor(relation.getCurrentGroup(), frameOldColor);
+                }, States.Start, "Waiting to start."]);
 
+            // MOVE TO NEXT STATE
             newColor = relation.generateNewColor();
             relation.changeGroupColor(relation.getCurrentGroup(), newColor);
             relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
@@ -568,10 +570,9 @@ function play(time = animTime) {
             break;
 
         case States.RunToSort:
-            var currentGroup = relation.getCurrentGroup();
-
             // Leggi il contenuto del primo gruppo e scrivilo nel buffer
             var frames = relation.readCurrentGroup();
+
             // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
             var start_x = [];
             var start_y = [];
@@ -592,13 +593,16 @@ function play(time = animTime) {
                 color.push(frames[i].color);
             }
 
+            // UNDO
             rollback.push([() => {
                 relation.undoReadCurrentGroup(frames);
                 buffer.undoWriteOnBuffer();
-                nRead -= frames.length;                    document.getElementById('read-count').textContent = nRead;
+                nRead -= frames.length;                    
+                document.getElementById('read-count').textContent = nRead;
             },
             States.RunToSort, textBox.innerHTML]);
 
+            // MOVE TO NEXT STATE
             tween = animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
                 // Quando terminano le animazioni, scrivi i dati nel buffer
                 buffer.writeOnBuffer(frames);
@@ -614,11 +618,14 @@ function play(time = animTime) {
             break;
 
         case States.RunInBuffer:
+            // UNDO
             var oldFramesValues = [];
-            for (frame of buffer.frames)
+            for (frame of buffer.frames) {
                 oldFramesValues.push(frame.getValues());
+            }
             rollback.push([() => buffer.undoSortAnimation(oldFramesValues), States.RunInBuffer, textBox.innerHTML]);
 
+            // MOVE TO NEXT STATE
             // Avvia il sort
             tween = buffer.sortAnimation(time / 5, () => {
                 applicationState = States.BufferSorted;
@@ -631,6 +638,7 @@ function play(time = animTime) {
             // Prendi i frame non vuoti del buffer
             var frames = buffer.clear();
 
+            // UNDO
             rollback.push([() => {
                 var oldValues = relation.readCurrentGroup();
                 buffer.writeOnBuffer(oldValues);
@@ -640,7 +648,8 @@ function play(time = animTime) {
                 document.getElementById('write-count').textContent = nWrite;
             }, States.BufferSorted, textBox.innerHTML]);
             
-            // Copia l'output frame nella relazione
+            // MOVE TO NEXT STATE
+            // Copia tutto il buffer nella relazione
             tween = relation.writeGroupAnimation(frames, time, () => {
                 // Aggiorno il valore del numero di write
                 nWrite += frames.length;
@@ -671,45 +680,39 @@ function play(time = animTime) {
             }
             // Altrimenti vedi se ha un fratello
             else {
-                var next_sibling = relation.getNextLeafParent(relation.getCurrentGroup());
-                // Se non ha fratelli (quindi e' l'ultimo dei suoi fratelli), passa alla fase di merge-sort
+                var next_sibling = relation.getNextLeaf(relation.getCurrentGroup());
+                // Se non ci sono altre foglie da ordinare (quindi e' l'ultima foglia), passa alla fase di merge-sort
                 if (next_sibling == null) {
-                    console.log("current group has no siblings left");
+                    // UNDO
                     rollback.push([() => {relation.undoSetCurrentGroup(); buffer.setMode('sort')}, States.RunSorted, textBox.innerHTML]);
+                    // MOVE TO NEXT STATE
                     relation.setCurrentGroup(relation.getFirstNotLeaf());
                     applicationState = States.RunsToMerge;
                     buffer.setMode('merge');
                     showMessage(Messages.childrenMustBeMergeSorted);
                 }
+                // Altrimenti se c'e' un'altra foglia da ordinare
                 else {
                     relation.setCurrentGroup(next_sibling);
+                    // UNDO
                     const frameOldColor = relation.getCurrentGroup().value[0].color;
-
                     rollback.push([() => {
                             relation.changeGroupColor(relation.getCurrentGroup(), frameOldColor);
                             relation.undoSetCurrentGroup();
-                        }, States.RunSorted, textBox.innerHTML]);
-
+                        }, States.RunSorted, textBox.innerHTML]
+                    );
+                    // MOVE TO NEXT STATE
                     newColor = relation.generateNewColor();
                     relation.changeGroupColor(relation.getCurrentGroup(), newColor);
                     applicationState = States.RunToSort;
 
-                    // Questo controllo e' per mostrare il messaggio giusto
-                    if (relation.getCurrentGroup().value.length > bufferSize) {
-                        showMessage(Messages.currentGroupDoesNotFit);
-                    }
-                    else {
-                        showMessage(Messages.currentGroupFitsInBuffer);
-                    }
+                    // Mostra il messaggio
+                    showMessage(Messages.currentGroupFitsInBuffer);
                     
                 }
                 callback();
             }
             break;
-
-        case States.RunsNotToMerge:
-            var currentGroup = relation.getCurrentGroup();
-
 
         case States.RunsToMerge:
             var currentGroup = relation.getCurrentGroup();
@@ -720,17 +723,17 @@ function play(time = animTime) {
             var framesToWrite = [];
 
             // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
-            start_x = [];
-            start_y = [];
-            end_x = [];
-            end_y = [];
-            start_size = [];
-            end_size = [];
-            color = [];
+            var start_x = [];
+            var start_y = [];
+            var end_x = [];
+            var end_y = [];
+            var start_size = [];
+            var end_size = [];
+            var color = [];
             var animationLength = time;
 
-            // Genero un nuovo colore che verrà utilizzato quando i frames verranno scritti nella relazioni
-            newColor = relation.generateNewColor()
+            // Preparo il nuovo colore che verra' utilizzato quando i frames verranno scritti nella relazione
+            newColor = relation.generateNewColor();
 
             // Carica una pagina di ogni child dentro framesToWrite
             for (let i = 0; i < siblings.length; i++) {
@@ -746,6 +749,7 @@ function play(time = animTime) {
                 color.push(fr.color);
             }
 
+            // UNDO
             var startingIndx = relation.getIndx(currentGroup.children[0].value[0]);
             var emptyFramesSwap = [];
             var dec = 0;
@@ -757,7 +761,6 @@ function play(time = animTime) {
                 if (diff >= 0)
                     dec += 1;
             }
-            console.log(emptyFramesSwap);
 
             rollback.push([() => {
                 buffer.undoWriteOnBuffer();
@@ -771,22 +774,18 @@ function play(time = animTime) {
                 document.getElementById('read-count').textContent = nRead;
             }, States.GroupToMerge, textBox.innerHTML]);
 
+            // MOVE TO NEXT STATE
             // Crea animazione
             tween = animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, animationLength, () => {
-                // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
-                    
+                // Shifta i frame in modo da riportare gli spazi vuoti all'inizio 
                 for (let i = 0; i < framesToWrite.length; i++) {
-                    console.log("sto shiftando");
                     relation.shiftFramesByOne(framesToWrite[i]);
                 }
-                    
                 // Scrivi i dati nel buffer
                 buffer.writeOnBuffer(framesToWrite);
                 // Aggiorno il numero di read
                 nRead += framesToWrite.length
                 document.getElementById('read-count').textContent = nRead;
-
-                console.log("LA RELATION DOPO FUN", relation.relationArray);
 
                 applicationState = States.ChildrenInBuffer;
                 showMessage(Messages.childrenBeingMergeSorted);
@@ -797,7 +796,7 @@ function play(time = animTime) {
 
 
         case States.ChildrenInBuffer:
-            var oldToRefill = buffer.frameRefilled;
+            // UNDO
             var oldFramesValues = [];
             for (frame of buffer.frames)
                 oldFramesValues.push(frame.getValues());
@@ -806,6 +805,7 @@ function play(time = animTime) {
                 buffer.undoMergeAnimation(oldFramesValues);
             }, States.ChildrenInBuffer, textBox.innerHTML])
             
+            // MOVE TO NEXT STATE
             // Se alla fine dell'animazione l'output è pieno va svuotato (caso 1),
             // se invece c'è un frame che è stato svuotato allora va riempito (caso 2)
             tween = buffer.mergeAnimation(
@@ -829,13 +829,11 @@ function play(time = animTime) {
 
             var fr = relation.readOnePageOfChild(frameEmptyIndx);
             if (fr) {
-
+                // UNDO
                 var startingIndx = relation.getIndx(relation.currentGroup.children[0].value[0]);
                 var emptyFrame = relation.availableFrames[relation.availableFrames.length - 1];
                 var emptyIndx = relation.getIndx(emptyFrame);
                 var swap = emptyIndx - startingIndx - relation.availableFrames.length + 1;
-                console.log("LO SWAP", swap);
-                //var relationIndx = relation.getIndx(relation.availableFrames[relation.availableFrames.length - 1]);
                 rollback.push([() => {
                     buffer.undoWriteOnBufferFrame(frameEmptyIndx);
                     relation.undoShiftFramesByOne(startingIndx, swap);
@@ -845,6 +843,7 @@ function play(time = animTime) {
                     document.getElementById('read-count').textContent = nRead;
                 }, States.OneEmptyFrameInBuffer, textBox.innerHTML]);
 
+                // MOVE TO NEXT STATE
                 // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
                 let endPos = buffer.getPositionOfFrame(frameEmptyIndx);
                 end_x = endPos[0];
@@ -859,15 +858,17 @@ function play(time = animTime) {
                         nRead += 1
                         document.getElementById('read-count').textContent = nRead;
 
-                        // Se l'output è pieno
+                        // Se c'e' un altro frame vuoto
                         if (buffer.framesToRefill.length) {
                             applicationState = States.OneEmptyFrameInBuffer;
                             showMessage(Messages.emptyFrameInBuffer);
                         }
+                        // Se l'output frame e' pieno
                         else if (buffer.checkFullOutput()) {
                             applicationState = States.OutputFrameFullMerging;
                             showMessage(Messages.outputFrameFull);
                         }
+                        // Altrimenti riprendi il merge dei frame del buffer
                         else {
                             applicationState = States.ChildrenInBuffer;
                             showMessage(Messages.childrenBeingMergeSorted);
@@ -876,18 +877,20 @@ function play(time = animTime) {
                     });
                 });
             }
+            // Altrimenti, se il figlio non ha un'altra pagina da caricare
             else {
-                // L'output è pieno
+                // L'output frame e' pieno
                 rollback.push(() => {buffer.framesToRefill.push(frameEmptyIndx);}, States.OneEmptyFrameInBuffer, textBox.innerHTML);
                 if (buffer.checkFullOutput()) {
                     applicationState = States.OutputFrameFullMerging;
                     showMessage(Messages.outputFrameFull);
                 }
-                // Il buffer non è vuoto
+                // Il buffer non e' vuoto
                 else if (buffer.bufferContainsSomething()) {
                     applicationState = States.ChildrenInBuffer;
                     showMessage(Messages.childrenBeingMergeSorted);
                 }
+                // Altrimenti hai finito il merge (DA RIVEDERE)
                 else {
                     applicationState = States.OutputFrameFullMerging;
                     showMessage(Messages.outputFrameFull);
@@ -899,7 +902,7 @@ function play(time = animTime) {
         
         case States.OutputFrameFullMerging:
 
-            /* Per il rollback */
+            // UNDO
             var currentGroup = relation.getCurrentGroup();
 
             var freeAvailableFrame = relation.getFreeAvailableFrame();
@@ -915,7 +918,6 @@ function play(time = animTime) {
             for (var i = 0; i < oldIndices.length; i++) {
                 oldIndices[i].shift()
             }
-            console.log("OLD INDICES", oldIndices);
             rollback.push([() => {
                 buffer.undoFlushOutputFrame(oldBufferValues);
                 if (!buffer.bufferContainsSomething()) {
@@ -924,15 +926,15 @@ function play(time = animTime) {
                 relation.undoWriteWithAnimation(freeAvailableFrame, oldIndices);
                 nWrite -= 1;
                 document.getElementById('write-count').textContent = nWrite;
-                console.log(relation.relation);
             }, States.OutputFrameFullMerging, textBox.innerHTML]);
-            /****************************/
+
+
+            // MOVE TO NEXT STATE
 
             // Prendi l'output frame
             var frame = buffer.flushOutputFrame();
 
-            // Imposta il suo colore pari al colore dell'ultimo figlio
-            //frame.color = relation.getColorOfLastChild();
+            // Imposta il suo colore pari al colore nuovo che stiamo dando al gruppo mergiato
             frame.color = newColor;
 
             // Copia l'output frame nella relazione
@@ -941,14 +943,13 @@ function play(time = animTime) {
                 nWrite += 1;
                 document.getElementById('write-count').textContent = nWrite;
 
-                // Se c'e' ancora qualcosa nel buffer torni allo stato GroupInBuffer, altrimenti vai a RunSorted
+                // Se c'e' ancora qualcosa nel buffer torni allo stato ChildrenInBuffer, altrimenti mergia i children
                 if (buffer.bufferContainsSomething()) {
-                    console.log("buffer still contains something");
                     applicationState = States.ChildrenInBuffer;
                     showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
-                    // Se non c'è il padre terminiamo. Se c'è allora prendiamo il prossimo nodo alla stessa profondità
+                    // Se non c'è il padre terminiamo. Se c'e' allora prendiamo il prossimo nodo alla stessa profondita'
                     relation.mergeChildren();
                     if (!currentGroup.parent) {
                         applicationState = States.Finish;
@@ -967,7 +968,7 @@ function play(time = animTime) {
 
             // Cerco il prossimo nodo da mergiare. Se è nullo quello a destra
             // questo significa che devo prendere il primo nodo all'estrema sinistra. Cioè sto iniziando una nuova ****
-            var nextNode = relation.getNextLeafParent(relation.getCurrentGroup());
+            var nextNode = relation.getNextLeaf(relation.getCurrentGroup());
             if (!nextNode) {
                 nextNode = relation.relation;
                 while (nextNode.children.length)

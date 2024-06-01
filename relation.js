@@ -257,7 +257,7 @@ class Relation {
     }
 
 
-    getNextLeafParent(node) {
+    getNextLeaf(node) {
         if (node.parent == null) return null;
 
         var siblings = node.parent.children;
@@ -271,7 +271,7 @@ class Relation {
             }
         }
 
-        return this.getNextLeafParent(node.parent);
+        return this.getNextLeaf(node.parent);
     }
 
 
