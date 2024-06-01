@@ -153,7 +153,10 @@ class Relation {
         }
         // Creiamo l'ultimo nodo che sarà l'origine dell'albero. Aggiungiamo i figli e cambiamo il padre a questi figli
         this.relation = new TreeNode([]);
-        this.relation.children = lastLayer[0].children;
+        if (!lastLayer[0].children.length)
+            this.relation.children = [lastLayer[0]];
+        else
+            this.relation.children = lastLayer[0].children;
         for (var i = 0; i < lastLayer[0].children.length; i++)
             lastLayer[0].children[i].parent = this.relation;
     }
