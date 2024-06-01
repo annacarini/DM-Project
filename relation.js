@@ -10,21 +10,17 @@ class Relation {
     currentGroup;
 
     // per il redraw degli highlighters
-    groupHighlightedSort = null;
     groupHighlighted = null;
 
     // Frame liberi in cui andare a scrivere l'output
     availableFrames = [];
 
     // Rettangoli (solo bordo) che servono ad evidenziare il gruppo preso in considerazione
-    highlighters = []; 
-    highlightersSort = [];
+    highlighters = [];
 
     // PARAMETRI PER GRAFICA
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
-    frameColor = " 	hsl(188, 74%, 72%)"; //"hsl(188, 94%, 80%)";
-    highlightersSortColor = "black";
-    highlightersSortMargin = 2;
+    frameColor = " 	hsl(188, 74%, 72%)";
     highlightersColor = "black";
     highlightersMargin = 6;
     highlighterThickness = VERY_THICK_LINE;
@@ -86,7 +82,6 @@ class Relation {
 
         // Poni il nodo attuale uguale a tutta la relazione
         this.currentGroup = this.relation;
-        this.currentGroupToSort = this.currentGroup;
     }
 
 
@@ -118,6 +113,65 @@ class Relation {
         }
     }
 
+
+    // Per generare valori random per riempire la relazione
+    generateRandomValues(quantity) {
+        var vals = [];
+        for (let i = 0; i < quantity; i++) {
+            vals.push(Math.round(Math.random() * this.maxRandomValue));
+        }
+        return vals;
+    }
+
+
+    /****************** SET-GET *******************/
+
+    setCurrentGroup(group) {
+        this.currentGroup = group;
+
+        // Evidenzia il gruppo
+        this.highlightGroup(this.currentGroup);
+    }
+
+
+    setAvailableFrames(newAvailableFrames) {
+        this.availableFrames = newAvailableFrames;
+    }
+
+
+    getCurrentGroup() {
+        return this.currentGroup;
+    }
+
+
+    getIndx(frame) {
+        for (var i = 0; i < this.relationArray.length; i++) {
+            if (frame == this.relationArray[i])
+                return i;
+        }
+        return -1;
+    }
+
+
+    getFreeAvailableFrame() {
+        for (var i = 0; i < this.availableFrames.length; i++) {
+            if (this.availableFrames[i].elements.length < 1)
+                return i;
+        }
+        return -1;
+    }
+
+
+    getAvailableFrameIndx(frame) {
+        for (var i = 0; i < this.availableFrames.length; i++) {
+            if (this.availableFrames[i] == frame)
+                return i;
+        }
+        return -1;
+    }
+
+
+    /*******************  TREE MANAGER **************************/
 
     // Trasforma la relation in una struttura ad albero in cui ogni foglia ha la stessa profondità.
     // Parte dividendo i frame in NFrames / M run. Ogni run è un nodo avente M figli (i frames).
@@ -160,34 +214,6 @@ class Relation {
             this.relation.children = lastLayer[0].children;
         for (var i = 0; i < lastLayer[0].children.length; i++)
             lastLayer[0].children[i].parent = this.relation;
-    }
-
-
-    setCurrentGroupToSort(group) {
-        this.currentGroup = group;
-
-        this.highlightGroup(this.currentGroup, "highlightersSort");
-
-        // Rendiamo i vecchi higlighters grigi
-        for (var i = 0; i < this.highlighters.length; i++)
-            this.highlighters[i].stroke = "#c0c0c0";
-        
-        // Andiamo a rimuovere gli higlighters sort e a riaggungerli in modo che vengano disegnati davanti
-        this.group.remove(this.highlightersSort);
-        this.group.add(this.highlightersSort);
-    }
-
-
-    setCurrentGroup(group) {
-        this.currentGroup = group;
-
-        // Elimino i gruppi da sortare evidenziati in precedenza
-        for (var i = this.highlightersSort.length - 1; i >= 0; i--) {
-            this.highlightersSort[i].remove();
-        }
-
-        // Evidenzia il gruppo
-        this.highlightGroup(this.currentGroup, "highlighters");
     }
 
 
@@ -234,11 +260,6 @@ class Relation {
                 return group;
         }
         return group;
-    }
-
-
-    getCurrentGroup() {
-        return this.currentGroup;
     }
 
 
@@ -294,63 +315,21 @@ class Relation {
     }
 
 
-    getChildIndx(child) {
-        console.log("IL CILD", child);
-        for (var i = 0; i < this.currentGroup.parent.children.length; i++) {
-            if (this.currentGroup.parent.children[i] == child) return i;
-        }
-        return -1;
-    }
-
-
-    getIndx(frame) {
-        for (var i = 0; i < this.relationArray.length; i++) {
-            if (frame == this.relationArray[i])
-                return i;
-        }
-        return -1;
-    }
-
-    getFreeAvailableFrame() {
-        for (var i = 0; i < this.availableFrames.length; i++) {
-            if (this.availableFrames[i].elements.length < 1)
-                return i;
-        }
-        return -1;
-    }
-
-
-    getAvailableFrameIndx(frame) {
-        for (var i = 0; i < this.availableFrames.length; i++) {
-            if (this.availableFrames[i] == frame)
-                return i;
-        }
-        return -1;
-    }
-
-
-    emptyAvailableFrames() {
-        this.availableFrames = [];
-    }
-
+    /******************************* ART **********************/
 
     // Disegna rettangoli intorno ai frame (CONSECUTIVI!) contenuti nel campo values del nodo "groupNode". Salva i rettangoli dentro "highlighters"
-    highlightGroup(groupNode, nameHighl, callback=null) {
+    highlightGroup(groupNode, callback=null) {
 
         // elimina gli highlighter gia' esistenti
-        var highlighters = this[nameHighl]
-        for (var i = highlighters.length - 1; i >= 0; i--) {
-            highlighters[i].remove();
+        for (var i = this.highlighters.length - 1; i >= 0; i--) {
+            this.highlighters[i].remove();
         }
-        highlighters = [];
+        this.highlighters = [];
+
+        // salvati il fatto che hai evidenziato questo gruppo
+        this.groupHighlighted = groupNode;
 
         if (groupNode == null) {    // cosi' chiamiamo la funzione con parametro null per de-evidenziare
-            if (nameHighl == "highlighters") {
-                this.groupHighlighted = null;
-            }
-            else if (nameHighl == "highlightersSort") {
-                this.groupHighlightedSort = null;
-            }
             return;
         }
 
@@ -366,31 +345,21 @@ class Relation {
 
             // Se questo frame e' su una nuova riga rispetto al precedente, disegna l'highlighter per la riga precedente
             if (currentFrame.y != lastFrameOfRow.y) {
-                highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, lastFrameOfRow, this[nameHighl + "Color"], this[nameHighl + "Margin"]));
+                this.highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, lastFrameOfRow, this.highlightersColor, this.highlightersMargin));
                 
                 // metti questo come first frame of row
                 firstFrameOfRow = currentFrame;
-                this.group.add(highlighters[highlighters.length - 1]);
+                this.group.add(this.highlighters[this.highlighters.length - 1]);
             }
             // Se e' l'ultimo elemento del gruppo, disegna l'highlighter
             if (i == group.length - 1) {
-                highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, currentFrame, this[nameHighl + "Color"], this[nameHighl + "Margin"]));
-                this.group.add(highlighters[highlighters.length - 1]);
+                this.highlighters.push(this.makeRectangleAroundFrames(firstFrameOfRow, currentFrame, this.highlightersColor, this.highlightersMargin));
+                this.group.add(this.highlighters[this.highlighters.length - 1]);
             }
 
             // metti questo come last frame of row       
             lastFrameOfRow = currentFrame;
         } 
-
-        this[nameHighl] = highlighters
-
-        // salvati il fatto che hai evidenziato questo gruppo
-        if (nameHighl == "highlighters") {
-            this.groupHighlighted = groupNode;
-        }
-        else if (nameHighl == "highlightersSort") {
-            this.groupHighlightedSort = groupNode;
-        }
 
         // Se c'e' una callback eseguila
         if (callback != null) callback();
@@ -411,16 +380,6 @@ class Relation {
     }
 
 
-    // Per generare valori random per riempire la relazione
-    generateRandomValues(quantity) {
-        var vals = [];
-        for (let i = 0; i < quantity; i++) {
-            vals.push(Math.round(Math.random() * this.maxRandomValue));
-        }
-        return vals;
-    }
-
-
     showContent(show) {
         for (var i = 0; i < this.relationArray.length; i++) {
             this.relationArray[i].setView(show);
@@ -429,73 +388,6 @@ class Relation {
 
 
     /********************* SPLIT E MERGE DEI NODI *********************/
-
-    // Dividi il gruppo attuale in n sotto-nodi
-    splitGroup(number) {
-
-        // Se stai dividendo in un unico gruppo non ha senso
-        if (number <= 1) {
-            console.log("Trying to split in 1 single group");
-            return;
-        }
-
-        // Prendi i frame da dividere nei sotto gruppi
-        var frames = this.currentGroup.value;
-
-        // Se ci sono <= number frame fermati perche' non ha senso dividerli ulteriormente
-        if (frames.length <= number) {
-            console.log("Trying to split a group that fits in the buffer");
-            return;
-        }
-
-        // Capisci quanti frame mettere nei sotto nodi
-        var framesPerGroup = Math.floor(frames.length / number);       // per esempio, Math.floor(8/3) = 2
-        var groupsWithOneExtraFrame = frames.length % number;         // per esempio, 8 % 3 = 2, quindi due dei tre gruppi avranno un frame in piu'
-        
-        // Crea nodi con framesPerGroup + 1 frame
-        for (var i = 0; i < groupsWithOneExtraFrame; i++) {
-            let value = frames.slice(i*(framesPerGroup+1), i*(framesPerGroup+1) + framesPerGroup+1);
-            let node = new TreeNode(value, this.currentGroup);
-            this.currentGroup.children.push(node);
-        }
-
-        // Crea nodi con framesPerGroup frame
-        var newStartingIndex = groupsWithOneExtraFrame*(framesPerGroup+1);
-        var remainingFrames = frames.slice(newStartingIndex);
-        for (var i = 0; i < number - groupsWithOneExtraFrame; i++) {
-            let value = remainingFrames.slice(i*(framesPerGroup), i*(framesPerGroup) + framesPerGroup);
-            let node = new TreeNode(value, this.currentGroup);
-            this.currentGroup.children.push(node);
-        }
-
-        console.log("Splitting done. Groups:");
-        console.log(this.currentGroup);
-
-        // Cambia il colore a tutti i gruppi tranne l'ultimo
-        var color = Relation.randomColor();
-        for (var i = 0; i < this.currentGroup.children.length - 1; i++) {
-            this.changeGroupColor(this.currentGroup.children[i], Relation.stringifyColor(color));
-            // assicurati che il nuovo colore non sia troppo simile a quello precedente
-            var newColor = Relation.randomColor();
-            while (Relation.differenceBetweenColors(newColor, color) < 70 ) {
-                newColor = Relation.randomColor();
-            }
-            //console.log("difference: " + this.differenceBetweenColors(newColor, color));
-            color = newColor;
-        }
-
-        // Rimuovi i frame dal gruppo attuale (perche' sono stati suddivisi tra i suoi children)
-        this.currentGroup.value = [];
-
-        // Imposta il primo gruppo come nodo attuale. Se il primo figlio del gruppo corrente ha
-        // meno frames del buffer allora va sortato. Quindi è creato un altro highlighter
-        if (this.currentGroup.children[0].value.length > number)
-            this.setCurrentGroup(this.currentGroup.children[0]);
-        else
-            this.setCurrentGroupToSort(this.currentGroup.children[0]);
-
-    }
-
 
     // Unisce tutti i figli del gruppo attuale, mettendo i loro frame come "value" del gruppo attuale. Poi elimina i figli
     mergeChildren() {
@@ -511,7 +403,7 @@ class Relation {
         // Ri-ordina i frame rispetto alla y e rispetto alla x, in modo da averli nello stesso
         // ordine in cui appaiono graficamente (perche' la funzione shiftFramesByOne incasina
         // tutto, ma servono ordinati per disegnare l'highlighter bene)
-        frames.sort( this.compareFramesByPosition );
+        frames.sort( this._compareFramesByPosition );
 
         // Metti questi frame come "value" del nodo attuale
         this.currentGroup.value = frames;
@@ -523,11 +415,10 @@ class Relation {
         //var color = frames[frames.length - 1].color;
         //this.changeGroupColor(this.currentGroup, color);
     }
-    
 
 
     // Serve per ordinare i frame in base alla loro posizione
-    compareFramesByPosition( frame1, frame2 ) {
+    _compareFramesByPosition( frame1, frame2 ) {
         if (frame1.y < frame2.y) {  // frame 1 e' su una riga sopra, quindi va messo prima
             return -1;
         }
@@ -544,8 +435,6 @@ class Relation {
         }
         return 0;
     }
-
-
 
     
     /**************** PER GESTIRE IL CAMBIO DEI COLORI ****************/
@@ -570,6 +459,7 @@ class Relation {
         return [h, s, l];
     }
 
+
     static getDarkerColor(color) {
         // prende un colore espresso come HSL, tipo: "hsl(105, 73%, 62%)" e ne diminuisce il terzo valore, ovvero la luminosita'
         var colorArray = Relation.hslToArray(color);
@@ -577,6 +467,7 @@ class Relation {
         colorArray[2] = Math.max(0, colorArray[2]-16);  // assicuriamoci che non diventi minore di zero
         return Relation.stringifyColor(colorArray);
     }
+
 
     static stringifyColor(col) {
         return "hsl(" + col[0] + ',' + col[1] + '%,' + col[2] + '%)';
@@ -592,6 +483,7 @@ class Relation {
 
         return [h, s, l]
     }
+
 
     // Converte un colore esadecimale in un una stringa hsl
     static hexToHSL(hex) {
@@ -640,19 +532,6 @@ class Relation {
         l = Math.round(l * 100);
         
         return `hsl(${h},${s}%,${l}%)`;
-    }
-
-
-    // serve durante la fase di scrittura del merge-sort
-    getColorOfLastChild() {
-        // Se il nodo corrente non ha figli, restituisci il colore di questo gruppo
-        if (this.currentGroup.children == []) {
-            return this.currentGroup.value[0].color;
-        }
-
-        // Restituisci il colore del primo frame dell'ultimo figlio
-        var children = this.currentGroup.children;
-        return children[children.length - 1].value[0].color;
     }
 
 
@@ -745,9 +624,7 @@ class Relation {
                 poi svuoti il frame e lo aggiungi ad availableFrames. Intanto scrivi gli output nei frame liberi di
                 availableFrames, e quando hai finito puoi svuotare availableFrames e fare il merge dei siblings.
 
-
     */
-
 
     readCurrentGroup() {
         var framesToReturn = [];
@@ -810,27 +687,8 @@ class Relation {
     }
 
 
-    write(frame) {
-        var res = false;
-        for (let i = 0; i < this.availableFrames.length; i++) {
-            if (this.availableFrames[i].elements.length < 1) {    // se trovi un frame vuoto
-                // scrivi gli elementi
-                this.availableFrames[i].fill(frame.elements);
-                // cambia il colore
-                this.availableFrames[i].setColor(frame.color);
-                this.availableFrames[i].setSorted(frame.sorted);
-                res = true;
-                break;
-            }
-        }
-        return res;
-    }
-
-
     writeGroupAnimation(frames, time = 1000, callback=null) {
         var res = [];
-        console.log("GLI AVAILABLE", this.availableFrames);
-        console.log("FRAME", frames);
         for (let i = 0; i < frames.length; i++) {
             let frame = frames[i];
             let final_color = this.availableFrames[i].color;
@@ -845,7 +703,7 @@ class Relation {
                 this.availableFrames[i].setSorted(frame.sorted);
                 // se questo era l'ultimo availableFrame (ed ora e' stato riempito), svuota l'array
                 if (i == this.availableFrames.length - 1) {
-                    this.emptyAvailableFrames();
+                    this.setAvailableFrames([]);
                     if (callback != null) callback();
                 }
             });
@@ -880,7 +738,7 @@ class Relation {
                     this.availableFrames[i].setSorted(frame.sorted);
                     // se questo era l'ultimo availableFrame (ed ora e' stato riempito), svuota l'array
                     if (i == this.availableFrames.length - 1) {
-                        this.emptyAvailableFrames();
+                        this.setAvailableFrames([]);
                     }
 
                     if (callback != null) callback();
@@ -925,7 +783,7 @@ class Relation {
             if (shifting) {
                 // se il frame prima non e' vuoto e non e' in availableFrames, scambialo con l'empty frame
                 if (this.relationArray[i-1].elements.length > 0 && !this.availableFrames.includes(this.relationArray[i-1])) {
-                    this.swapFrames(i-1, i);
+                    this._swapFrames(i-1, i);
 
                     // se il frame con cui hai scambiato era lo starting frame, fermati
                     if (this.relationArray[i] == startingFrame) {
@@ -946,7 +804,7 @@ class Relation {
 
     // Questa scambia due frame, sia cambiando il loro indice dentro relationArray, sia
     // scambiando le loro posizioni
-    swapFrames(i, j) {
+    _swapFrames(i, j) {
         //console.log("swapping " + i + " and " + j);
         var pos_i = [this.relationArray[i].x, this.relationArray[i].y];
         var pos_j = [this.relationArray[j].x, this.relationArray[j].y];
@@ -963,10 +821,7 @@ class Relation {
     }
 
 
-
-
-    /************************ per il REDRAW ************************/
-
+    /************************ REDRAW ************************/
 
     // Da chiamare quando cambia la dimensione della finestra
     redrawRelation(x, y, width, height, minimumFrameSize, applicationState) {
@@ -994,7 +849,6 @@ class Relation {
             // Riposizionalo
             this.relationArray[i].setPosition(framePositionX, framePositionY);
 
-
             // Prepara posizione per il prossimo frame:
 
             // Se il frame e' l'ultimo della riga, aumenta la Y e resetta la X
@@ -1010,126 +864,23 @@ class Relation {
 
         this.highlighterThickness = VERY_THICK_LINE;
 
-
         // Controlla se gli highlighter c'erano
-        if (this["highlighters"].length < 1) this.groupHighlighted = null;
-        if (this["highlightersSort"].length < 1) this.groupHighlightedSort = null;
+        if (this.highlighters.length < 1) this.groupHighlighted = null;
 
         // Elimina tutti gli highlighters
-        var highlighters = this["highlighters"];
-        for (var i = highlighters.length - 1; i >= 0; i--) {
-            highlighters[i].remove();
+        for (var i = this.highlighters.length - 1; i >= 0; i--) {
+            this.highlighters[i].remove();
         }
-        this["highlighters"] = [];
+        this.highlighters = [];
 
-        highlighters = this["highlightersSort"];
-        for (var i = highlighters.length - 1; i >= 0; i--) {
-            highlighters[i].remove();
-        }
-        this["highlightersSort"] = [];
-
-
-        // Ri disegna gli highlighers        
-        if (this.groupHighlighted != null && this.groupHighlighted != this.groupHighlightedSort) {
-            
-            this.highlightGroup(this.groupHighlighted, "highlighters");
-            
-            if (this.groupHighlightedSort != null) {
-                var highlighters = this["highlighters"];
-                for (var i = 0; i < highlighters.length; i++) {
-                    highlighters[i].stroke = "#c0c0c0"
-                }
-            }
-            
-        }
-
-        if (this.groupHighlightedSort != null) {
-            this.highlightGroup(this.groupHighlightedSort, "highlightersSort")
-        }
-    
-
+        // Ri disegna gli highlighers     
+        this.highlightGroup(this.groupHighlighted);
     }
 
 
-    
-    /************************ per l'UNDO ************************/
-
-
-    _equalCurrentGroup(group1, group2) {
-        const keys1 = Object.keys(group1);
-        const keys2 = Object.keys(group2);
-    }
-
-    // Sono qui definite le funzioni di undo
-
-    undoHighlightGroup(nameHighl) {
-
-        console.log("UNDO HIGHLIGHT GROUP");
-
-        var highlighters = this[nameHighl]
-        for (var i = highlighters.length - 1; i >= 0; i--) {
-            highlighters[i].remove();
-        }
-        highlighters = [];
-    }
-
-    undoSplitGroup(color) {
-
-        console.log("UNDO SPLIT GROUP")
-
-        // Prendi tutti i figli
-        var children = this.currentGroup.parent.children;
-
-        // Unisci tutti i frame di tutti i children e riportali al colore originale
-        var frames = [];
-        for (let i = 0; i < children.length; i++) {
-            for (let j = 0; j < children[i].value.length; j++)
-                children[i].value[j].setColor(color);
-            frames = frames.concat(children[i].value);
-        }
-        
-        // Ri-ordina i frame rispetto alla y e rispetto alla x, in modo da averli nello stesso
-        // ordine in cui appaiono graficamente (perche' la funzione shiftFramesByOne incasina
-        // tutto, ma servono ordinati per disegnare l'highlighter bene)
-        frames.sort( this.compareFramesByPosition );
-
-        console.log("valore", this.currentGroup.parent.children[0]);
-        console.log("children:", this.currentGroup.parent.children[0].children == this.currentGroup.children);
-        console.log("parent:", this.currentGroup.parent.children[0].parent == this.currentGroup.parent);
-        console.log("value", this.currentGroup.parent.children[0].value == this.currentGroup.value);
-
-        for (var i = 0; i < this.currentGroup.parent.children[0].value.length; i++)
-            console.log(this.currentGroup.parent.children[0].value[i] == this.currentGroup.value[i]);
-        console.log("La grandezza del currentGruop.children e del currentGroup.parent.childre: ", this.currentGroup.children.length, this.currentGroup.parent.children[0].children.length)
-        for (var i = 0; i < this.currentGroup.children.length; i++)
-            console.log(this.currentGroup.parent.children[0].children[i] == this.currentGroup.children[i]);
-        console.log("Il value", this.currentGroup.parent.children[0].value, this.currentGroup.value)
-
-        console.log("Il gruppo corrente: ", this.currentGroup.parent.children);
-        console.log(this.currentGroup);
-        console.log(this.currentGroup.parent.children[0] == this.currentGroup);
-        if (!this.currentGroup.children.length && this.currentGroup.parent.children[0] == this.currentGroup) {
-            var highlighters = this["highlightersSort"]
-            for (var i = highlighters.length - 1; i >= 0; i--) {
-                highlighters[i].remove();
-            }
-            this["highlightersSort"] = []
-        }
-
-        this.currentGroup = this.currentGroup.parent
-        // Metti questi frame come "value" del nodo attuale
-        this.currentGroup.value = frames;
-        
-        // Elimina i figli
-        this.currentGroup.children = [];
-
-        this.highlightGroup(this.currentGroup, "highlighters");
-    }
+    /************************ UNDO ************************/
 
     undoReadCurrentGroup(frames) {
-
-        console.log("UNDO READ CURRENT GROUP");
-
         this.availableFrames = [];
 
         for (let i = 0; i < this.currentGroup.value.length; i++) {
@@ -1137,20 +888,14 @@ class Relation {
         }
     }
 
+
     // Se ci sono degli availableFrames cerco il primo vuoto. Quello riempito per ultimo
     // è quello prima.
     // Se this.availableframes è vuoto significa che l'ultimo frame ad essere stato scritto è l'ultimo
     // del gruppo. Quindi prendo i frames del gruppo e li metto dentro available frames e resetto l'ultimo
     // frame.
     undoWriteWithAnimation(indx, oldAvailableIndx = []) {
-        console.log("UNDO WRITE WITH ANIMATION");
-        
         if (this.availableFrames.length) {
-            /*for (var i = 0; i < this.availableFrames.length; i++) {
-                if (this.availableFrames[i].elements.length == 0)
-                    break;
-            }
-            i -= 1;*/
             this.availableFrames[indx].resetFrame();
         }
         else {
@@ -1167,7 +912,6 @@ class Relation {
                     this.availableFrames[oldAvailableIndx[i][2]] = this.currentGroup.children[oldAvailableIndx[i][0]].value[oldAvailableIndx[i][1]];
                 }
             }
-            console.log(this.availableFrames[indx]);
             this.availableFrames[indx].resetFrame();
         }
     }
@@ -1177,9 +921,6 @@ class Relation {
     // In caso contrario cerco il primo nodo che si trovi a sinistra del mio che non abbia un figlio, quello era il nodo selezionato
     // Se getPrevoiusLeafParent è null significa che il nodo è l'ultimo a destra nell'albero (else)
     undoSetCurrentGroup() {
-
-        console.log("UNDO SET CURRENT GROUP");
-
         const currGroup = this.getCurrentGroup();
         
         if (!currGroup.parent) {
@@ -1188,7 +929,6 @@ class Relation {
         }
 
         var prev = this.getPreviousLeafParent(currGroup);
-        console.log("PREV", prev);
         if (prev != null)
             this.setCurrentGroup(prev);
         else {
@@ -1201,18 +941,7 @@ class Relation {
     }
 
 
-    undoSetCurrentGroupToSort(indx) {
-        console.log("UNDO SET CURRENT GROUP TO SORT");
-
-        console.log("L'indice è: ", indx);
-        this.setCurrentGroupToSort(this.currentGroup.parent.children[indx]);
-    }
-
-
     undoShiftFramesByOne(startingIndx, swap) {
-        
-        console.log("UNDO SHIFT FRAMES BY ONE");
-        
         var lastEmpty = startingIndx;
         for (var i = startingIndx; i < this.relationArray.length - 1; i++) {
             if (!this.relationArray[i].elements.length && this.relationArray[i + 1].elements.length) {
@@ -1220,57 +949,15 @@ class Relation {
                 break;
             }
         }
-        console.log("Lo startind", startingIndx, "Lo swap", swap);
         for (var j = 0; j < swap; j++) {
-            console.log("FACciaomo lo swap");
-            this.swapFrames(lastEmpty + j, lastEmpty + j + 1)
+            this._swapFrames(lastEmpty + j, lastEmpty + j + 1)
         }
     }
 
-    // Prima viene trovato quale sia il primo frameEmpty, in questo modo si conosce da quale indx
-    // ripristinare la relation. A questo punto vengono ricopiati i vecchi valori dei frame nel relation
-    // index e ripristinati i loro colori e valori.
-    undoAnimateMultipleSquares(firstEmpty, oldValue, oldColor, oldPosition) {
-        
-        console.log("UNDO ANIMATED MULTIPLE SQUARES");
-        
-        var indx = 0;
-        while (indx < this.relationArray.length && firstEmpty != this.relationArray[indx])
-            indx++;
-        for (var i = 0; i < this.currentGroup.children.length; i++) {
-            for (var j = 0; j < this.currentGroup.children[i].value.length; j++) {
-                this.currentGroup.children[i].value[j].resetFrame();
-                this.currentGroup.children[i].value[j].fill(oldValue[i][j]);
-                this.currentGroup.children[i].value[j].setColor(oldColor[i][j]);
-                this.currentGroup.children[i].value[j].setSorted(true);
-                this.currentGroup.children[i].value[j].setPosition(oldPosition[i][j][0],oldPosition[i][j][1]);
-                this.relationArray[indx] = this.currentGroup.children[i].value[j];
-                indx += 1;
-            }
-        }
-    }
-
-
-    undoAnimateOneSquare(endIndx) {
-
-        console.log("UNDO ANIMATE ONE SQUARE");
-
-        var startIndx = endIndx;
-        while (this.relationArray[startIndx].getValues().length)
-            startIndx -= 1;
-        while (startIndx < endIndx) {
-            this.swapFrames(startIndx, endIndx);
-            startIndx += 1;
-        }
-    }
 
     undoReadOnePageOfChild(oldFrame = null) {
-        console.log("UNDO READ ONE PAGE");
-        
         var frame = this.availableFrames.pop();
-        console.log("Il frame", frame.elements);
         if (oldFrame) {
-            //var indx = this.getIndx(frame);
             frame.fill(oldFrame.elements);
             frame.setColor(oldFrame.color);
         }
@@ -1278,9 +965,6 @@ class Relation {
 
 
     undoMergeChildren(oldGroups) {
-
-        console.log("UNDO MERGE CHILDREN");
-
         var frames = this.currentGroup.value;
         this.currentGroup.value = [];
 

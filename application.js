@@ -550,14 +550,14 @@ function play(time = animTime) {
             // UNDO
             const frameOldColor = relation.getCurrentGroup().value[0].color;
             rollback.push([() => {
-                    relation.undoHighlightGroup("highlighters");
+                    relation.highlightGroup(null);
                     relation.changeGroupColor(relation.getCurrentGroup(), frameOldColor);
                 }, States.Start, "Waiting to start."]);
 
             // MOVE TO NEXT STATE
             newColor = relation.generateNewColor();
             relation.changeGroupColor(relation.getCurrentGroup(), newColor);
-            relation.highlightGroup(relation.getCurrentGroup(), "highlighters", () => {
+            relation.highlightGroup(relation.getCurrentGroup(), () => {
                 applicationState = States.RunToSort;
                 callback();
             });
@@ -662,9 +662,9 @@ function play(time = animTime) {
             // Controlla se questo gruppo e' la radice (significa che hai finito tutto)
             var currentGroup = relation.getCurrentGroup();
             if (currentGroup.parent == null) {
-                rollback.push([() =>  relation.highlightGroup(currentGroup, "highlighters"), States.RunSorted, textBox.innerHTML]);
+                rollback.push([() =>  relation.highlightGroup(currentGroup), States.RunSorted, textBox.innerHTML]);
                 applicationState = States.Finish;
-                relation.highlightGroup(null, "highlighters");      // de-evidenzia la relazione
+                relation.highlightGroup(null);      // de-evidenzia la relazione
                 showMessage(Messages.finished);
                 // disabilita i pulsanti tanto hai finito
                 playButton.disabled = true;
