@@ -46,28 +46,17 @@ class Frame {
 
         this.setPosition(x, y);
 
-        this._yPosition = []
-        var offset = (this.size - this.linewidth)/this.max_elements
-        for (var i = 0; i < this.max_elements; i++) {
-            this._yPosition.push(offset * (i - (this.max_elements - 1)/2))
-        }
-
     }
 
 
-    getValue(indx) {
-        return this.elements[indx][0];
+    copy(frame) {
+        this.fill(frame.elements);
+        this.setColor(frame.color);
+        this.setSorted(frame.sorted)
     }
 
 
-    getValues() {
-        var ret = [];
-        for (var i = 0; i < this.elements.length; i++) {
-            ret.push(this.elements[i][0]);
-        }
-        return ret;
-    }
-    
+    /****************** GET-SET ***********/
 
     setPosition(x, y) {
         this.x = x;
@@ -95,7 +84,6 @@ class Frame {
 
 
     setColor(color) {
-        //cambiare colore
         this.color = color;
         this.texture = createCustomTexture(this.size, this.size, this.color, ColorManager.getDarkerColor(this.color), this.size / 40, this.size / 12)
         this.rect_content.opacity = 1;
@@ -103,14 +91,25 @@ class Frame {
             this.rect_content.fill = this.texture
         else
             this.rect_content.fill = color;
-
     }
 
 
-    copy(frame) {
-        this.fill(frame.elements);
-        this.setColor(frame.color);
-        this.setSorted(frame.sorted)
+    getValue(indx) {
+        return this.elements[indx][0];
+    }
+
+
+    getValues() {
+        var ret = [];
+        for (var i = 0; i < this.elements.length; i++) {
+            ret.push(this.elements[i][0]);
+        }
+        return ret;
+    }
+
+
+    getRealSize() {
+        return this.size * this.group.scale;
     }
 
 
@@ -119,6 +118,8 @@ class Frame {
         this.rect_search.visible = false;
     }
 
+
+    /********************* READ-WRITE *************************/
 
     resetFrame() {
         var ret = this.getValues()
@@ -166,21 +167,6 @@ class Frame {
     }
 
 
-    addElementAnimation(element, time) {
-        const tween = new TWEEN.Tween(this.rect_search).to({opacity: 0}, time / 2)
-        tween.onStart(() => {
-            this.addElement(element)
-            this.rect_search.position.y = (this.size - this.linewidth)/2 - (this.max_elements - this.elements.length + 0.5)*(this.size - this.linewidth) / this.max_elements;
-            this.rect_search.visible = true;
-        })
-        const tween2 = new TWEEN.Tween(this.rect_search).to({opacity: 1}, time / 2)
-        tween.chain(tween2)
-        tween2.onComplete(() => {this._resetRectSearch();})
-
-        return [tween, tween2]
-    }
-
-
     removeElement(indx) {
         var element = this.elements.splice(indx, 1);
         var value = element[0][0]
@@ -197,86 +183,15 @@ class Frame {
 
         return value
     }
-
-
-    removeElementAnimation(indx, time) {
-        const tween = new TWEEN.Tween(this.rect_search).to({opacity: 0}, time / 2)
-        tween.onStart(() => {
-            this.rect_search.position.y += (this.rect_search.height * indx);
-            this.rect_search.visible = true;
-        })
-        const tween2 = new TWEEN.Tween(this.rect_search).to({opacity: 1}, time / 2)
-        tween.chain(tween2)
-        tween2.onComplete(() => {this._resetRectSearch(); this.removeElement(indx)})
-
-        return [tween, tween2]
-    }
-
-
-    findAnimation(indx, time) {
-        const offset = this.rect_search.height
-        var new_y = this.rect_search.position.y
-        var group = new TWEEN.Group()
-        var last_tween = null
-        var new_tween = null
-
-        var i = 0
-        while (i < indx) {
-            new_y += offset
-            new_tween = new TWEEN.Tween(null, group).to(null, time/indx)
-            if (last_tween != null)
-                last_tween.chain(new_tween)
-            else
-                new_tween.start()
-            last_tween = new_tween
-            new_tween = new TWEEN.Tween(this.rect_search.position, group).to({y: new_y}, 0)
-            last_tween.chain(new_tween)
-            last_tween = new_tween
-            i++
-        }
-        if (last_tween != null) {
-            last_tween.onComplete(this._resetRectSearch)
-        }
-
-        return group
-    }
-
-
-    findMax() {
-        var max = 0
-        var indx = -1
-        for (var i = 0; i < this.elements.length; i++) {
-            if (this.elements[i] > max) {
-                max = this.elements[i]
-                indx = i
-            }
-        }
-        return max, indx
-    }
-
-
-    findMin() {
-        var min = Infinity
-        var indx = -1
-        for (var i = 0; i < this.elements.length; i++) {
-            if (this.elements[i][0] < min) {
-                min = this.elements[i][0]
-                indx = i
-            }
-        }
-        return [min, indx]
-    }
-
-
-    realSize() {
-        return this.size * this.group.scale;
-    }
     
+
+    /******************* REDRAW **************/
 
     // Per il redraw quando cambia la misura della finestra
     resizeFrame(newSize) {
         var scaleFactor = newSize / this.initialSize;
         this.group.scale = scaleFactor;
     }
+
 }
   

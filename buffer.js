@@ -175,7 +175,7 @@ class Buffer {
         var res = {
             x: this.outputFrame.x,
             y: this.outputFrame.y,
-            size: this.outputFrame.realSize(),
+            size: this.outputFrame.getRealSize(),
             color: this.outputFrame.color,
             elements: this.outputFrame.getValues(),
             sorted: this.outputFrame.sorted
@@ -192,7 +192,7 @@ class Buffer {
             var frameInfo = {
                 x: frame.x,
                 y: frame.y,
-                size: frame.realSize(),
+                size: frame.getRealSize(),
                 color: frame.color,
                 elements: frame.getValues(),
                 sorted: frame.sorted

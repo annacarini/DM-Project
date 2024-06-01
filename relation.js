@@ -87,8 +87,6 @@ class Relation {
 
     // Tenta di inserire i frame della misura corrente, se non c'entrano riduce la misura di 10px e ri-tenta
     findOptimalSize(width, height, relationSize, frameSize, minimumFrameSize) {
-        
-        //console.log("Testing frame size: " + frameSize);
 
         // Se la misura e' piu' piccola di quella minima
         if (frameSize < minimumFrameSize) {
@@ -369,8 +367,8 @@ class Relation {
     makeRectangleAroundFrames(firstFrame, lastFrame, color, marginDistance) {
         var centerX = (firstFrame.x + lastFrame.x)/2;
         var centerY = firstFrame.y;
-        var width = lastFrame.x - firstFrame.x + firstFrame.realSize() + marginDistance;
-        var height = firstFrame.realSize() + marginDistance;
+        var width = lastFrame.x - firstFrame.x + firstFrame.getRealSize() + marginDistance;
+        var height = firstFrame.getRealSize() + marginDistance;
         var rect = this.two.makeRectangle(centerX, centerY, width, height);
         rect.stroke = color;
         rect.linewidth = this.highlighterThickness;
@@ -526,7 +524,7 @@ class Relation {
             framesToReturn.push({
                 x: this.currentGroup.value[i].x,
                 y: this.currentGroup.value[i].y,
-                size: this.currentGroup.value[i].realSize(),
+                size: this.currentGroup.value[i].getRealSize(),
                 color: this.currentGroup.value[i].color,
                 elements: elems
             });
@@ -556,7 +554,7 @@ class Relation {
                 frameToReturn = {
                     x: child.value[i].x,
                     y: child.value[i].y,
-                    size: child.value[i].realSize(),
+                    size: child.value[i].getRealSize(),
                     color: child.value[i].color,
                     elements: child.value[i].getValues(),
                     toRefill: (i < child.value.length-1)
@@ -582,7 +580,7 @@ class Relation {
             let final_color = this.availableFrames[i].color;
             var end_x = this.availableFrames[i].x;
             var end_y = this.availableFrames[i].y;
-            var end_size = this.availableFrames[i].realSize();
+            var end_size = this.availableFrames[i].getRealSize();
             var tween = animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, time, () => {
                 // scrivi gli elementi
                 this.availableFrames[i].fill(frame.elements);
@@ -617,7 +615,7 @@ class Relation {
                 // ANIMAZIONE
                 var end_x = this.availableFrames[i].x;
                 var end_y = this.availableFrames[i].y;
-                var end_size = this.availableFrames[i].realSize();
+                var end_size = this.availableFrames[i].getRealSize();
                 var tween = animateOneSquare(frame.x, frame.y, end_x, end_y, frame.size, end_size, final_color, time, () => {
                     // scrivi gli elementi
                     this.availableFrames[i].fill(frame.elements);
@@ -660,7 +658,6 @@ class Relation {
         var currentFrame;
         for (var i = this.relationArray.length-1; i > 0; i--) {
 
-            //console.log(i);
             currentFrame = this.relationArray[i];
 
             if (!shifting) {
@@ -675,7 +672,6 @@ class Relation {
 
                     // se il frame con cui hai scambiato era lo starting frame, fermati
                     if (this.relationArray[i] == startingFrame) {
-                        console.log("trovato starting frame, posizione: " + i);
                         break;
                     }
                 }
@@ -693,7 +689,7 @@ class Relation {
     // Questa scambia due frame, sia cambiando il loro indice dentro relationArray, sia
     // scambiando le loro posizioni
     _swapFrames(i, j) {
-        //console.log("swapping " + i + " and " + j);
+
         var pos_i = [this.relationArray[i].x, this.relationArray[i].y];
         var pos_j = [this.relationArray[j].x, this.relationArray[j].y];
         var frame_i = this.relationArray[i];
