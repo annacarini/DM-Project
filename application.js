@@ -555,7 +555,7 @@ function play(time = animTime) {
                 }, States.Start, "Waiting to start."]);
 
             // MOVE TO NEXT STATE
-            newColor = relation.generateNewColor();
+            newColor = ColorManager.generateNewColor(relation.retrieveColors());
             relation.changeGroupColor(relation.getCurrentGroup(), newColor);
             relation.highlightGroup(relation.getCurrentGroup(), () => {
                 applicationState = States.RunToSort;
@@ -697,7 +697,7 @@ function play(time = animTime) {
                         }, States.RunSorted, textBox.innerHTML]
                     );
                     // MOVE TO NEXT STATE
-                    newColor = relation.generateNewColor();
+                    newColor = ColorManager.generateNewColor(relation.retrieveColors());
                     relation.changeGroupColor(relation.getCurrentGroup(), newColor);
                     applicationState = States.RunToSort;
 
@@ -728,7 +728,7 @@ function play(time = animTime) {
             var animationLength = time;
 
             // Preparo il nuovo colore che verra' utilizzato quando i frames verranno scritti nella relazione
-            newColor = relation.generateNewColor();
+            newColor = ColorManager.generateNewColor(relation.retrieveColors());
 
             // Carica una pagina di ogni child dentro framesToWrite
             for (let i = 0; i < siblings.length; i++) {

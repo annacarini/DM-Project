@@ -97,7 +97,7 @@ class Frame {
     setColor(color) {
         //cambiare colore
         this.color = color;
-        this.texture = createCustomTexture(this.size, this.size, this.color, Relation.getDarkerColor(this.color), this.size / 40, this.size / 12)
+        this.texture = createCustomTexture(this.size, this.size, this.color, ColorManager.getDarkerColor(this.color), this.size / 40, this.size / 12)
         this.rect_content.opacity = 1;
         if (this.sorted && this.texture.loaded)
             this.rect_content.fill = this.texture
