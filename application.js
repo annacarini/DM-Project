@@ -24,6 +24,7 @@ const States = {
 
 var applicationState = States.Start;    // Tiene lo stato attuale dell'applicazione
 
+
 // PER GESTIRE L'ANIMAZIONE
 var playOneStepButton = null;
 var playButton = null;
@@ -42,7 +43,7 @@ var simulationStopped = false;  // per bloccare le animazioni e i tasti quando a
 var two;
 
 var textBox = null;     // Casella a sx in cui appaiono messaggi
-var showingRelationContent = true; 
+var showingRelationContent = true;
 
 // Per fare il redraw quando cambi la dimensione della finestra
 var mustRedraw = false;
@@ -67,8 +68,6 @@ var VERY_THICK_LINE = windowW/320;
 var frameSize = windowW/15;
 var SPACE_BETWEEN_FRAMES = windowW/200;
 
-var fontSizeBig = windowW/60;
-var fontSizeMedium = windowW/80;
 var fontSizeSmall = windowW/100;
 
 // Valori I/O
@@ -76,30 +75,9 @@ var nRead = 0;
 var nWrite = 0;
 
 // Rollback
-var rollback = []
+var rollback = [];
 
 // Stili testo
-const fontStyleMediumBlack = {
-    alignment: "left",
-    family: "Calibri",
-    size: fontSizeMedium,
-    weight: 650,
-    fill: "rgb(0,0,0)"
-}
-const fontStyleMediumGray = {
-    alignment: "left",
-    family: "Calibri",
-    size: fontSizeMedium,
-    weight: 600,
-    fill: "rgb(79,79,79)"
-}
-const fontStyleSmallBlack = {
-    alignment: "left",
-    family: "Calibri",
-    size: fontSizeSmall,
-    weight: 500,
-    fill: "rgb(0,0,0)"
-}
 const fontStyleSmallBlackCentered = {
     alignment: "center",
     family: "Calibri",
@@ -118,18 +96,19 @@ const animTimeVeryFast = 300;
 const animTimeFast = 500;
 const animTimeSlow = 900;
 const animTimeVerySlow = 1150;
-var animTime = animTimeSlow;
 const waitingTimeVeryFast = 150;
 const waitingTimeFast = 250;
 const waitingTimeSlow = 500;
 const waitingTimeVerySlow = 600;
+var animTime = animTimeSlow;
 var waitingTime = waitingTimeSlow;
 const Speeds = {VeryFast:0, Fast:1, Slow:2, VerySlow:3};
 var currentSpeed = Speeds.Slow;
 var makeSpeedFaster, makeSpeedSlower;   // funzioni definite sotto
 
+
 // Animazioni
-var tween = null
+var tween = null;
 
 
 // Crea la una texture con delle righe
@@ -156,6 +135,7 @@ function createCustomTexture(width, height, backgroundColor, barColor, barWidth,
     var texture = new Two.Texture(canvas);
     return texture;
 }
+
 
 // MESSAGGI
 const Messages = {
@@ -376,11 +356,11 @@ function startSimulation() {
 
     // updates the drawing area and actually renders the content
     two.update();
+    requestAnimationFrame(animate);
 }
 
 
 function reset() {
-    console.log("Resettiamo!")
     textBox.innerHTML = "Waiting to start.";
     nRead = 0;
     nWrite = 0;
@@ -409,7 +389,7 @@ function reset() {
     relation.group.remove();    
     buffer = new Buffer(upperPart.center.x, upperPart.center.y - 15, bufferSize, frameSize, two);
     relation = new Relation(two, relationSize, lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, frameSize, 15);
-    // Creaimo l'albero e selezioniamo il primo padre di una foglia come gruppo corrente
+    // Creiamo l'albero e selezioniamo il primo padre di una foglia come gruppo corrente
     relation.createTree(bufferSize);
     const notLeaf = relation.getFirstLeaf();
     relation.currentGroup = notLeaf;
@@ -424,6 +404,8 @@ function reset() {
 function showMessage(text) {
     textBox.innerHTML = text;
 }
+
+
 function showMessageBoxContent(show) {
     if (show) {
         textBox.removeAttribute("hidden");
@@ -431,6 +413,137 @@ function showMessageBoxContent(show) {
     else {
         textBox.setAttribute("hidden", null);
     }
+}
+
+
+function redrawEverything() {
+
+    // Aggiorna misure
+    updateSizes();
+
+    // Ri disegna buffer
+    buffer.redrawBuffer(upperPart.center.x, upperPart.center.y - 15);
+
+    // Ri disegna la relazione
+    relation.redrawRelation(lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, 15);
+}
+
+
+function updateSizes() {
+    windowW = window.innerWidth;
+    windowH = window.innerHeight;
+    centerX = windowW / 2;
+    centerY = windowH / 2;
+
+    MEDIUM_LINE = windowW/550;
+    THICK_LINE = windowW/420;
+    VERY_THICK_LINE = windowW/320;
+
+    frameSize = windowW/15;
+    SPACE_BETWEEN_FRAMES = windowW/200;
+
+    fontSizeSmall = windowW/100;
+
+    fontStyleSmallBlackCentered.size = fontSizeSmall;
+    
+    // Aggiorna sezioni
+    leftColumn = new Section(document.getElementById("column_sx"));
+    centerColumn = new Section(document.getElementById("column_center"));
+    upperPart = new Section(document.getElementById("column_center_upper_part"));
+    lowerPart = new Section(document.getElementById("column_center_lower_part"));
+}
+
+
+
+// Funzione che fa apparire un quadrato che si sposta da una pos iniziale a una finale, poi
+// quando l'animazione termina elimina il quadrato e chiama la callback che gli viene passata
+function animateOneSquare(start_x, start_y, end_x, end_y, start_size, end_size, color, time, animationCompleteCallback = null) {
+
+    // Crea il quadrato
+    var square = two.makeRectangle(start_x, start_y, start_size, start_size);
+    square.fill = color;
+    square.noStroke();
+    
+    var values = { x: start_x, y: start_y, size: start_size };
+    const tween = new TWEEN.Tween(values)
+        .to({ x: end_x, y: end_y, size: end_size }, time)
+        .onUpdate(function() {
+            square.translation.set(values.x, values.y);
+            square.scale = values.size/start_size;
+        })
+        .onComplete(() => {
+            // elimina il quadrato
+            square.remove();
+            // se c'e', chiama la callback
+            if (animationCompleteCallback != null) animationCompleteCallback();
+        });
+
+    tween.start();
+
+    return tween;
+}
+
+
+function compareFramesByPosition( frame1, frame2 ) {
+    frame1 = frame1[0];
+    frame2 = frame2[0];
+    if (frame1.y < frame2.y) {  // frame 1 e' su una riga sopra, quindi va messo prima
+        return -1;
+    }
+    else if (frame1.y > frame2.y) {  // frame 1 e' su una riga dopo, quindi va messo dopo
+        return 1;
+    }
+    else {                             // sono sulla stessa riga
+        if (frame1.x < frame2.x) {      // frame 1 e' su una colonna piu' a sx, quindi va messo prima
+            return -1;
+        }
+        else if (frame1.x > frame2.x) {      // frame 1 e' su una colonna piu' a dx, quindi va messo dopo
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+// Come animateOneSquare, solo che start_x, start_y, end_x, end_y, size, e color ora
+// sono degli array (devono essere tutti della stessa lunghezza)
+function animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, time, animationCompleteCallback = null) {
+
+    var numberOfSquares = start_x.length;
+
+    // Crea i quadrati e l'array con le posizioni attuali
+    var squares = [];
+    var currentValues = [];     // array di dizionari contenenti: x, y, size
+    var endValues = [];
+    for (var i = 0; i < numberOfSquares; i++) {
+        var sq = two.makeRectangle(start_x[i], start_y[i], start_size[i], start_size[i]);
+        sq.fill = color[i];
+        sq.noStroke();
+        squares.push(sq);
+        currentValues.push({ x: start_x[i], y: start_y[i], size:start_size[i] });
+        endValues.push({ x: end_x[i], y: end_y[i], size:end_size[i] });
+    }
+    const tween = new TWEEN.Tween(currentValues)
+        .to(endValues, time)
+        .onUpdate(function() {
+            for (var i = 0; i < numberOfSquares; i++) {
+                squares[i].translation.set(currentValues[i].x, currentValues[i].y);
+                squares[i].scale = currentValues[i].size/start_size[i];
+            }
+            
+        })
+        .onComplete(() => {
+            // elimina i quadrati
+            for (var i = 0; i < numberOfSquares; i++) {
+                squares[i].remove();
+            }
+            // se c'e', chiama la callback
+            if (animationCompleteCallback != null) animationCompleteCallback();
+        });
+
+    tween.start();
+
+    return tween;
 }
 
 
@@ -455,6 +568,7 @@ function playOne(time = animTime) {
     play(time);
 }
 
+
 function playAll() {
     if (applicationState == States.Finish) return;
 
@@ -478,6 +592,7 @@ function playAll() {
     play(animTime);
 }
 
+
 function pause() {
 
     // disattiva pulsante pausa
@@ -495,8 +610,7 @@ function pause() {
     playOneStepButton.disabled = false;
     playJumpButton.disabled = false;
     undoButton.disabled = false;
-    
-    //endTween(tween);
+
 }
 
 
@@ -508,7 +622,6 @@ function undo() {
         return;
     }
 
-    //endTween(tween);
     if (rollback.length) {
         var lastAction = rollback[rollback.length -  1];
         lastAction[0]();
@@ -527,9 +640,7 @@ function undo() {
     }
 
     showMessageBoxContent(true);
-    console.log("text box content: ", textBox.innerHTML);
-    console.log("Il nuovo stato è: ", applicationState);
-    console.log("La relazione è: ", relation);
+    //console.log("Il nuovo stato è: ", applicationState); //DEBUG
 }
 
 
@@ -761,13 +872,11 @@ function play(time = animTime) {
                 buffer.undoWriteOnBuffer();
                 for (var i = framesToWrite.length - 1; i >= 0; i--)
                     relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
-                console.log("LA RELATION", relation.relationArray);
                 for (var i = framesToWrite.length - 1; i >= 0; i--)
                     relation.undoReadOnePageOfChild(framesToWrite[i]);
-                console.log("IL VALORE DI CURRENT group", relation.currentGroup)
                 nRead -= framesToWrite.length;
                 document.getElementById('read-count').textContent = nRead;
-            }, States.GroupToMerge, textBox.innerHTML]);
+            }, States.RunsToMerge, textBox.innerHTML]);
 
             // MOVE TO NEXT STATE
             // Crea animazione
@@ -1012,34 +1121,9 @@ function play(time = animTime) {
 }
 
 
-// Funzione per terminare un tween
-function endTween(tween) {
-    if (tween == null)
-        return ;
-    console.log("Il tween: ", tween)
-    // Il tween viene stoppato
-    tween.stop();
-    // I valori modificati dal tween vengono impostati al loro valore finale
-    for (var obj in tween._valuesEnd) {
-        for (var key in tween._valuesEnd[obj])
-            tween._object[obj][key] = tween._valuesEnd[obj][key];
-    }
-    // E' richiamata la funzione di completamento
-    if (tween._onCompleteCallback)
-        tween._onCompleteCallback();
-    // Tutti i tween concatenati a questo sono fatti terminare, richiamandone anche la funzione di start
-    var chainedTweens = tween._chainedTweens;
-    for (var i = 0; i < chainedTweens.length; i++) {
-        if (chainedTweens[i]._onStartCallback)
-            chainedTweens[i]._onStartCallback();
-        endTween(chainedTweens[i]);
-    }
-}
-
-
 async function callback() {
 
-    console.log("Lo stato dell'applicazione: ", applicationState)
+    //console.log("Lo stato dell'applicazione: ", applicationState) //DEBUG
 
     playing = false;    // per dire che l'esecuzione attuale e' terminata
 
@@ -1061,7 +1145,6 @@ function animate() {
         if (Date.now() - lastResizeTime > timeIntervalForRedraw) {
             mustRedraw = false;
             // ri-disegna tutto
-            console.log("redrawing");
             redrawEverything();
         }
     }
@@ -1069,145 +1152,4 @@ function animate() {
     TWEEN.update();
     requestAnimationFrame(animate);
 }
-requestAnimationFrame(animate)
-
-
-
-
-function redrawEverything() {
-
-    // Aggiorna misure
-    updateSizes();
-
-    // Ri disegna buffer
-    buffer.redrawBuffer(upperPart.center.x, upperPart.center.y - 15);
-
-    // Ri disegna la relazione
-    relation.redrawRelation(lowerPart.center.x, lowerPart.center.y + 40, lowerPart.width*0.9, lowerPart.height*0.75, 15);
-}
-
-
-function updateSizes() {
-    windowW = window.innerWidth;
-    windowH = window.innerHeight;
-    centerX = windowW / 2;
-    centerY = windowH / 2;
-
-    MEDIUM_LINE = windowW/550;
-    THICK_LINE = windowW/420;
-    VERY_THICK_LINE = windowW/320;
-
-    frameSize = windowW/15;
-    SPACE_BETWEEN_FRAMES = windowW/200;
-
-    fontSizeBig = windowW/60;
-    fontSizeMedium = windowW/80;
-    fontSizeSmall = windowW/100;
-    
-    fontStyleMediumBlack.size = fontSizeMedium;
-    fontStyleMediumGray.size = fontSizeMedium;
-    fontStyleSmallBlack.size = fontSizeSmall;
-    fontStyleSmallBlackCentered.size = fontSizeSmall;
-    
-    // Aggiorna sezioni
-    leftColumn = new Section(document.getElementById("column_sx"));
-    centerColumn = new Section(document.getElementById("column_center"));
-    upperPart = new Section(document.getElementById("column_center_upper_part"));
-    lowerPart = new Section(document.getElementById("column_center_lower_part"));
-}
-
-
-
-// Funzione che fa apparire un quadrato che si sposta da una pos iniziale a una finale, poi
-// quando l'animazione termina elimina il quadrato e chiama la callback che gli viene passata
-function animateOneSquare(start_x, start_y, end_x, end_y, start_size, end_size, color, time, animationCompleteCallback = null) {
-
-    // Crea il quadrato
-    var square = two.makeRectangle(start_x, start_y, start_size, start_size);
-    square.fill = color;
-    square.noStroke();
-    
-    var values = { x: start_x, y: start_y, size: start_size };
-    const tween = new TWEEN.Tween(values)
-        .to({ x: end_x, y: end_y, size: end_size }, time)
-        .onUpdate(function() {
-            square.translation.set(values.x, values.y);
-            square.scale = values.size/start_size;
-        })
-        .onComplete(() => {
-            // elimina il quadrato
-            square.remove();
-            // se c'e', chiama la callback
-            if (animationCompleteCallback != null) animationCompleteCallback();
-        });
-
-    tween.start();
-
-    return tween;
-}
-
-function compareFramesByPosition( frame1, frame2 ) {
-    frame1 = frame1[0];
-    frame2 = frame2[0];
-    if (frame1.y < frame2.y) {  // frame 1 e' su una riga sopra, quindi va messo prima
-        return -1;
-    }
-    else if (frame1.y > frame2.y) {  // frame 1 e' su una riga dopo, quindi va messo dopo
-        return 1;
-    }
-    else {                             // sono sulla stessa riga
-        if (frame1.x < frame2.x) {      // frame 1 e' su una colonna piu' a sx, quindi va messo prima
-            return -1;
-        }
-        else if (frame1.x > frame2.x) {      // frame 1 e' su una colonna piu' a dx, quindi va messo dopo
-            return 1;
-        }
-    }
-    return 0;
-}
-
-// Come animateOneSquare, solo che start_x, start_y, end_x, end_y, size, e color ora
-// sono degli array (devono essere tutti della stessa lunghezza)
-function animateMultipleSquares(start_x, start_y, end_x, end_y, start_size, end_size, color, time, animationCompleteCallback = null) {
-
-    var numberOfSquares = start_x.length;
-
-    // Crea i quadrati e l'array con le posizioni attuali
-    var squares = [];
-    var currentValues = [];     // array di dizionari contenenti: x, y, size
-    var endValues = [];
-    for (var i = 0; i < numberOfSquares; i++) {
-        var sq = two.makeRectangle(start_x[i], start_y[i], start_size[i], start_size[i]);
-        sq.fill = color[i];
-        sq.noStroke();
-        squares.push(sq);
-        currentValues.push({ x: start_x[i], y: start_y[i], size:start_size[i] });
-        endValues.push({ x: end_x[i], y: end_y[i], size:end_size[i] });
-    }
-    const tween = new TWEEN.Tween(currentValues)
-        .to(endValues, time)
-        .onUpdate(function() {
-            for (var i = 0; i < numberOfSquares; i++) {
-                squares[i].translation.set(currentValues[i].x, currentValues[i].y);
-                squares[i].scale = currentValues[i].size/start_size[i];
-            }
-            
-        })
-        .onComplete(() => {
-            // elimina i quadrati
-            for (var i = 0; i < numberOfSquares; i++) {
-                squares[i].remove();
-            }
-            // se c'e', chiama la callback
-            if (animationCompleteCallback != null) animationCompleteCallback();
-        });
-
-    tween.start();
-
-    return tween;
-}
-
-
-
-
 
