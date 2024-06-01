@@ -823,75 +823,58 @@ function play(time = animTime) {
             var frameEmptyIndx = buffer.framesToRefill.pop();
 
             var fr = relation.readOnePageOfChild(frameEmptyIndx);
-            if (fr) {
-                // UNDO
-                var startingIndx = relation.getIndx(relation.currentGroup.children[0].value[0]);
-                var emptyFrame = relation.availableFrames[relation.availableFrames.length - 1];
-                var emptyIndx = relation.getIndx(emptyFrame);
-                var swap = emptyIndx - startingIndx - relation.availableFrames.length + 1;
-                rollback.push([() => {
-                    buffer.undoWriteOnBufferFrame(frameEmptyIndx);
-                    relation.undoShiftFramesByOne(startingIndx, swap);
-                    relation.undoReadOnePageOfChild(fr);
-                    buffer.framesToRefill.push(frameEmptyIndx);
-                    nRead -= 1;
+            if (!fr) {
+                alert("Error! Trying to load a non-existing new page from a sub-run.");
+            }
+
+            // UNDO
+            var startingIndx = relation.getIndx(relation.currentGroup.children[0].value[0]);
+            var emptyFrame = relation.availableFrames[relation.availableFrames.length - 1];
+            var emptyIndx = relation.getIndx(emptyFrame);
+            var swap = emptyIndx - startingIndx - relation.availableFrames.length + 1;
+            rollback.push([() => {
+                buffer.undoWriteOnBufferFrame(frameEmptyIndx);
+                relation.undoShiftFramesByOne(startingIndx, swap);
+                relation.undoReadOnePageOfChild(fr);
+                buffer.framesToRefill.push(frameEmptyIndx);
+                nRead -= 1;
+                document.getElementById('read-count').textContent = nRead;
+            }, States.OneEmptyFrameInBuffer, textBox.innerHTML]);
+
+            // MOVE TO NEXT STATE
+            // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
+            let endPos = buffer.getPositionOfFrame(frameEmptyIndx);
+            end_x = endPos[0];
+            end_y = endPos[1];
+
+            animateOneSquare(fr.x, fr.y, end_x, end_y, fr.size, frameSize, fr.color, time, () => {
+                // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
+                relation.shiftFramesByOne(fr);
+                // Scrivi i dati nel buffer
+                buffer.writeOnBufferFrame(fr, frameEmptyIndx, () => {
+                    // Aggiorno il valore del numero di read
+                    nRead += 1
                     document.getElementById('read-count').textContent = nRead;
-                }, States.OneEmptyFrameInBuffer, textBox.innerHTML]);
 
-                // MOVE TO NEXT STATE
-                // Ottieni le posizioni nel buffer dei vari frame (servono per l'animazione)
-                let endPos = buffer.getPositionOfFrame(frameEmptyIndx);
-                end_x = endPos[0];
-                end_y = endPos[1];
-
-                animateOneSquare(fr.x, fr.y, end_x, end_y, fr.size, frameSize, fr.color, time, () => {
-                    // Shifta i frame in modo da riportare gli spazi vuoti all'inizio
-                    relation.shiftFramesByOne(fr);
-                    // Scrivi i dati nel buffer
-                    buffer.writeOnBufferFrame(fr, frameEmptyIndx, () => {
-                        // Aggiorno il valore del numero di read
-                        nRead += 1
-                        document.getElementById('read-count').textContent = nRead;
-
-                        // Se c'e' un altro frame vuoto
-                        if (buffer.framesToRefill.length) {
-                            applicationState = States.OneEmptyFrameInBuffer;
-                            showMessage(Messages.emptyFrameInBuffer);
-                        }
-                        // Se l'output frame e' pieno
-                        else if (buffer.checkFullOutput()) {
-                            applicationState = States.OutputFrameFullMerging;
-                            showMessage(Messages.outputFrameFull);
-                        }
-                        // Altrimenti riprendi il merge dei frame del buffer
-                        else {
-                            applicationState = States.ChildrenInBuffer;
-                            showMessage(Messages.childrenBeingMergeSorted);
-                        }
-                        callback();
-                    });
+                    // Se c'e' un altro frame vuoto
+                    if (buffer.framesToRefill.length) {
+                        applicationState = States.OneEmptyFrameInBuffer;
+                        showMessage(Messages.emptyFrameInBuffer);
+                    }
+                    // Se l'output frame e' pieno
+                    else if (buffer.checkFullOutput()) {
+                        applicationState = States.OutputFrameFullMerging;
+                        showMessage(Messages.outputFrameFull);
+                    }
+                    // Altrimenti riprendi il merge dei frame del buffer
+                    else {
+                        applicationState = States.ChildrenInBuffer;
+                        showMessage(Messages.childrenBeingMergeSorted);
+                    }
+                    callback();
                 });
-            }
-            // Altrimenti, se il figlio non ha un'altra pagina da caricare
-            else {
-                // L'output frame e' pieno
-                rollback.push(() => {buffer.framesToRefill.push(frameEmptyIndx);}, States.OneEmptyFrameInBuffer, textBox.innerHTML);
-                if (buffer.checkFullOutput()) {
-                    applicationState = States.OutputFrameFullMerging;
-                    showMessage(Messages.outputFrameFull);
-                }
-                // Il buffer non e' vuoto
-                else if (buffer.bufferContainsSomething()) {
-                    applicationState = States.ChildrenInBuffer;
-                    showMessage(Messages.childrenBeingMergeSorted);
-                }
-                // Altrimenti hai finito il merge (DA RIVEDERE)
-                else {
-                    applicationState = States.OutputFrameFullMerging;
-                    showMessage(Messages.outputFrameFull);
-                }
-                callback();
-            }
+            });
+            
             break;
 
         
