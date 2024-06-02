@@ -839,6 +839,7 @@ function play(time = animTime) {
             var animationLength = time;
 
             // Preparo il nuovo colore che verra' utilizzato quando i frames verranno scritti nella relazione
+            const oldMergeColor = newColor; // salvato per l'undo
             newColor = ColorManager.generateNewColor(relation.retrieveColors());
 
             // Carica una pagina di ogni child dentro framesToWrite
@@ -869,6 +870,7 @@ function play(time = animTime) {
             }
 
             rollback.push([() => {
+                newColor = oldMergeColor;
                 buffer.undoWriteOnBuffer();
                 for (var i = framesToWrite.length - 1; i >= 0; i--)
                     relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);

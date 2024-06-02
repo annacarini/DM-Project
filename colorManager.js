@@ -90,12 +90,11 @@ class ColorManager {
     }
 
 
-        // Genera un nuovo colore. Dopo aver trovato tutti i colori presenti nella relazione
+    // Genera un nuovo colore. Dopo aver trovato tutti i colori presenti nella relazione
     // e averli convertiti nel formato array, va a creare un colore casuale e lo confronta
     // con tutti gli altri colori della relazione. Se è differente da tutti lo ritorna altrimenti
     // genera un altro colore con cui fare la comparazione. Ci prova per un massimo di 10 volte.
     static generateNewColor(colors) {
-        //var colors = this._retrieveColors(this.relation);
         for (var j = 0; j < colors.length; j++) {
             if (colors[j][0] == '#')
                 colors[j] = ColorManager.hexToHSL(colors[j])
