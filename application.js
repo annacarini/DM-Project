@@ -88,7 +88,7 @@ const fontStyleSmallBlackCentered = {
 
 
 // Per gestire il cambio dei colori nella relation al merge
-var newColor;
+var newColor = null;
 
 
 // Lunghezza animazioni e pausa callback
@@ -808,7 +808,7 @@ function play(time = animTime) {
                         }, States.RunSorted, textBox.innerHTML]
                     );
                     // MOVE TO NEXT STATE
-                    newColor = ColorManager.generateNewColor(relation.retrieveColors());
+                    newColor = ColorManager.generateNewColorDifferent(relation.retrieveColors(), newColor);
                     relation.changeGroupColor(relation.getCurrentGroup(), newColor);
                     applicationState = States.RunToSort;
 
@@ -840,7 +840,7 @@ function play(time = animTime) {
 
             // Preparo il nuovo colore che verra' utilizzato quando i frames verranno scritti nella relazione
             const oldMergeColor = newColor; // salvato per l'undo
-            newColor = ColorManager.generateNewColor(relation.retrieveColors());
+            newColor = ColorManager.generateNewColorDifferent(relation.retrieveColors(), oldMergeColor);
 
             // Carica una pagina di ogni child dentro framesToWrite
             for (let i = 0; i < siblings.length; i++) {

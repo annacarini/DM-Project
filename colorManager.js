@@ -1,8 +1,16 @@
 class ColorManager {
     
     static differenceBetweenColors(color1, color2) {
-        // Dai piu' importanza alla hue, ma considera anche la luminosita'
-        return Math.abs(color1[0] - color2[0]) + 0.08 * Math.abs(color1[2] - color2[2]);
+
+        // se i colori hanno hue tra 90 e 155 (cioe' sono dei verdi), restituisci una differenza minore
+        // perche' lo spettro del verde e' piu' largo degli altri
+        if (color1[0] >= 85 && color1[0] <= 160 && color2[0] >= 85 && color2[0] <= 160) {
+            return 0.8*Math.abs(color1[0] - color2[0]);
+        }
+        else {
+            // Dai piu' importanza alla hue, ma considera anche la luminosita'
+            return Math.abs(color1[0] - color2[0]) + 0.08 * Math.abs(color1[2] - color2[2]);
+        }
     }
 
 
@@ -87,6 +95,41 @@ class ColorManager {
         l = Math.round(l * 100);
         
         return `hsl(${h},${s}%,${l}%)`;
+    }
+
+
+    // Genera un nuovo colore che sia molto diverso da colorThatMustBeDifferent, e che sia un po'
+    // diverso anche da tutti gli altri
+    static generateNewColorDifferent(colors, colorThatMustBeDifferent) {
+        // trasforma tutti i colori da stringa a array [hue, saturation, luminance]
+        for (var j = 0; j < colors.length; j++) {
+            if (colors[j][0] == '#') {
+                colors[j] = ColorManager.hexToHSL(colors[j]);
+            }
+            colors[j] = ColorManager.hslToArray(colors[j]);
+        }
+        var i = 0;
+        var newColor = ColorManager.randomColor();
+        while (i < 10) {
+
+            // finche' e' troppo simile a colorThatMustBeDifferent, cambia colore
+            while (ColorManager.differenceBetweenColors(newColor, colorThatMustBeDifferent) < 75) {
+                newColor = ColorManager.randomColor();
+            }
+
+            var differents = 0;
+            for (var color of colors) {
+                if (ColorManager.differenceBetweenColors(color, newColor) > 40)
+                    differents += 1;
+            }
+            if (differents == colors.length) {
+                // Se è diverso da tutti i colori esco
+                return ColorManager.stringifyColor(newColor);
+            }
+            i++;
+            newColor = ColorManager.randomColor();
+        }
+        return ColorManager.stringifyColor(newColor);
     }
 
 
