@@ -20,7 +20,7 @@ class Relation {
 
     // PARAMETRI PER GRAFICA
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
-    frameColor = " 	hsl(188, 74%, 72%)";
+    frameColor = "hsl(188,74%,72%)";
     highlightersColor = "black";
     highlightersMargin = 6;
     highlighterThickness = VERY_THICK_LINE;
@@ -801,14 +801,15 @@ class Relation {
     }
 
 
-    // Se il gruppo corrente non ha un padre significa che non c'è nessun altro gruppo oltre a quello attuale, quindi quello precedente è null
+    // Se il gruppo corrente non ha un padre significa che non c'e' nessun altro gruppo oltre a quello attuale, quindi quello precedente e' null
     // In caso contrario cerco il primo nodo che si trovi a sinistra del mio che non abbia un figlio, quello era il nodo selezionato
     // Se getPrevoiusLeafParent è null significa che il nodo è l'ultimo a destra nell'albero (else)
     undoSetCurrentGroup() {
         const currGroup = this.getCurrentGroup();
         
         if (!currGroup.parent) {
-            this.setCurrentGroup(null);
+            // Mettiamo come currentGroup l'ultimo dei suoi figli
+            this.setCurrentGroup(currGroup.children[currGroup.children.length - 1]);
             return;
         }
 

@@ -27,14 +27,14 @@ class Buffer {
 
         // Crea i frame
         for (var i = 0; i < length; i++) {
-            var newFrame = new Frame(framePosition, y, frameSize, "white", MAX_ELEMENTS_PER_FRAME, two);
+            var newFrame = new Frame(framePosition, y, frameSize, "hsl(0,0%,100%)", MAX_ELEMENTS_PER_FRAME, two);
             newFrame.setView(1);
             this.frames.push(newFrame);
             this.group.add(newFrame.group);
             framePosition += frameSize + this.spaceBetween;
         }
 
-        // Crea output frame
+        // Assegna output frame
         this.outputFrame = this.frames[this.frames.length - 1];
 
         // Aggiungi scritta "output frame"
@@ -100,6 +100,20 @@ class Buffer {
         }
     }
 
+    getFramesColors() {
+        var cols = [];
+        for (var i = 0; i < this.frames.length; i++) {
+            cols.push(this.frames[i].color);
+        }
+        return cols;
+    }
+
+    setColorLines(show, numberOfChildren=this.frames.length) {
+        for (var i = 0; i < numberOfChildren; i++) {
+            this.frames[i].showColorLine(show);
+        }
+    }
+
 
     /***************** OPERAZIONI DI CHECK ***************************/
 
@@ -141,10 +155,11 @@ class Buffer {
 
     /******************************** WRITE-READ *************************/
 
-    writeOnBuffer(frames, callback=null) {
+    writeOnBuffer(frames, callback=null, showColorLines=false) {
         for (var i = 0; i < frames.length; i++) {
             var frame = frames[i];
             this.frames[i].copy(frame);
+            if (showColorLines) this.frames[i].showColorLine(true); 
             this.frameRefilled[i] = frame.toRefill;
         }
 
@@ -163,10 +178,10 @@ class Buffer {
     // Rimuove un elemento all'indice indx dal frame con indice FrameIndx.
     // Poi scrive tale elemento nell'output.
     writeFromTo(frameIndx, indx) {
-        var frame = this.frames[frameIndx]
-        var value = frame.getValue(indx)
-        frame.removeElement(indx)
-        this.outputFrame.addElement(value)
+        var frame = this.frames[frameIndx];
+        var value = frame.getValue(indx);
+        frame.removeElement(indx);
+        this.outputFrame.addElement(value);
     }
 
 
@@ -345,10 +360,14 @@ class Buffer {
 
     /****************** UNDO *****************/
 
-    undoWriteOnBuffer() {
+    undoWriteOnBuffer(oldBufferColors) {
+        if (oldBufferColors.length < this.frames.length) {
+            console.log("L'ARRAY COLORI E' PIU' CORTOOOO");
+        }
         for (var i = 0; i < this.frames.length; i++) {
             this.frames[i].resetFrame();
             this.frameRefilled[i] = false;
+            this.frames[i].setColor(oldBufferColors[i]);
         }
     }
 

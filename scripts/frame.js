@@ -33,21 +33,25 @@ class Frame {
         this.rect_content.fill = this.color
         this.rect_content.noStroke()
 
-        this.rect_search = two.makeRectangle(0, -(size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2, size - this.linewidth, (this.size - 5) / this.max_elements)
-        this.rect_search.fill = "rgba(0, 0, 0, 0.5)"
-        this.rect_search.noStroke()
-        this.rect_search.visible = false
+        this.color_line = two.makeRectangle(0, size*0.6, size/2, this.linewidth*1.5);
+        this.color_line.fill = "black";
+        this.color_line.noStroke();
+        this.color_line.visible = false;
 
-        this.group.add(this.rect)
-        this.group.add(this.rect_content)
-        this.group.add(this.rect_search)
+        this.group.add(this.rect);
+        this.group.add(this.rect_content);
+        this.group.add(this.color_line);
 
-        two.add(this.group)
+        two.add(this.group);
 
         this.setPosition(x, y);
 
     }
 
+    showColorLine(show) {
+        this.color_line.fill = this.color;
+        this.color_line.visible = show;
+    }
 
     copy(frame) {
         this.fill(frame.elements);
@@ -115,30 +119,30 @@ class Frame {
     }
 
 
-    _resetRectSearch() {
-        this.rect_search.position.y = -(this.size - this.linewidth)/2 + ((this.size - 5) / this.max_elements)/2;
-        this.rect_search.visible = false;
-    }
 
 
     /********************* READ-WRITE *************************/
 
     resetFrame() {
-        var ret = this.getValues()
+        var ret = this.getValues();
 
         for (var i = 0; i < this.elements.length; i++) {
-            this.elements[i][1].remove()
+            this.elements[i][1].remove();
         }
-        this.elements = []
-        this.rect_content.position.y = - (this.rect.height - this.linewidth) / 2
-        this.rect_content.height = 0
+        this.elements = [];
+        this.rect_content.position.y = - (this.rect.height - this.linewidth) / 2;
+        this.rect_content.height = 0;
 
-        return ret
+        return ret;
     }
 
 
     fill(new_elements) {
         this.elements = [];
+
+        if (new_elements.length < 1) {
+            return;
+        }
 
         var offset = (this.size) / this.max_elements;
         this.rect_content.height = (offset * new_elements.length) - this.linewidth;
@@ -171,19 +175,26 @@ class Frame {
 
     removeElement(indx) {
         var element = this.elements.splice(indx, 1);
-        var value = element[0][0]
-        var text = element[0][1]
+        var value = element[0][0];
+        var text = element[0][1];
 
-        var height_removed = (this.size - this.linewidth) / this.max_elements
-        this.rect_content.height -= height_removed
-        this.rect_content.position.y -=  height_removed / 2
+        var height_removed = (this.size - this.linewidth) / this.max_elements;
+        this.rect_content.height -= height_removed;
+        this.rect_content.position.y -=  height_removed / 2;
+
+        // trasla gli elementi rimasti in alto
         for (var i = indx; i < this.elements.length; i++) {
-            this.elements[i][1].position.y -= height_removed
+            this.elements[i][1].position.y -= height_removed;
+        }
+        
+        // se hai tolto tutti i numeri, metti l'altezza pari a zero
+        if (this.elements.length == 0) {
+            this.rect_content.height = 0;
         }
 
-        text.remove()
+        text.remove();
 
-        return value
+        return value;
     }
     
 

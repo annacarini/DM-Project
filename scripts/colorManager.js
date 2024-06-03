@@ -38,12 +38,12 @@ class ColorManager {
 
     // Converte un colore nel formato stringa hsl in un array di 3 elementi
     static hslToArray(color) {
-        var match = color.match(/(\d+(\.\d+)?)/g)
+        var match = color.match(/(\d+(\.\d+)?)/g);
         const h = parseFloat(match[0]);
         const s = parseFloat(match[1]);
         const l = parseFloat(match[2]);
 
-        return [h, s, l]
+        return [h, s, l];
     }
 
 

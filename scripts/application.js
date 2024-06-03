@@ -708,11 +708,12 @@ function play(time = animTime) {
                 end_size.push(frameSize);
                 color.push(frames[i].color);
             }
+            var oldBufferColors = buffer.getFramesColors();
 
             // UNDO
             rollback.push([() => {
                 relation.undoReadCurrentGroup(frames);
-                buffer.undoWriteOnBuffer();
+                buffer.undoWriteOnBuffer(oldBufferColors);
                 nRead -= frames.length;                    
                 document.getElementById('read-count').textContent = nRead;
             },
@@ -888,10 +889,12 @@ function play(time = animTime) {
                 if (diff >= 0)
                     dec += 1;
             }
+            var oldBufferColors = buffer.getFramesColors();
 
             rollback.push([() => {
                 newColor = oldMergeColor;
-                buffer.undoWriteOnBuffer();
+                buffer.undoWriteOnBuffer(oldBufferColors);
+                buffer.setColorLines(false);
                 for (var i = framesToWrite.length - 1; i >= 0; i--)
                     relation.undoShiftFramesByOne(startingIndx, emptyFramesSwap[i]);
                 for (var i = framesToWrite.length - 1; i >= 0; i--)
@@ -908,7 +911,7 @@ function play(time = animTime) {
                     relation.shiftFramesByOne(framesToWrite[i]);
                 }
                 // Scrivi i dati nel buffer
-                buffer.writeOnBuffer(framesToWrite);
+                buffer.writeOnBuffer(framesToWrite, null, true);    // il true significa metti le lineette colorate
                 // Aggiorno il numero di read
                 nRead += framesToWrite.length
                 document.getElementById('read-count').textContent = nRead;
@@ -1031,6 +1034,9 @@ function play(time = animTime) {
                 buffer.undoFlushOutputFrame(oldBufferValues);
                 if (!buffer.bufferContainsSomething()) {
                     relation.undoMergeChildren(oldIndices);
+                    // ri-mostra le lineette colorate
+                    var numberOfChildren = relation.getCurrentGroup().children.length;
+                    buffer.setColorLines(true, numberOfChildren);
                 }
                 relation.undoWriteWithAnimation(freeAvailableFrame, oldIndices);
                 nWrite -= 1;
@@ -1058,7 +1064,7 @@ function play(time = animTime) {
                     showMessage(Messages.bufferContentBeingSorted);
                 }
                 else {
-                    // Se non c'è il padre terminiamo. Se c'e' allora prendiamo il prossimo nodo alla stessa profondita'
+                    buffer.setColorLines(false);
                     relation.mergeChildren();
                     applicationState = States.RunsMerged;
                     showMessage(Messages.currentGroupMerged);
@@ -1072,7 +1078,7 @@ function play(time = animTime) {
             currentGroup = relation.getCurrentGroup();
             // Se non c'è il padre abbiamo finito
             if (!currentGroup.parent) {
-                rollback.push([() => relation.setCurrentGroup(currentGroup), States.RunsMerged, textBox.innerHTML]);
+                rollback.push([() => relation.highlightGroup(currentGroup), States.RunsMerged, textBox.innerHTML]);
                 applicationState = States.Finish;
                 showMessage(Messages.finished);
                 playing = false;
@@ -1083,7 +1089,8 @@ function play(time = animTime) {
                 playButton.disabled = true;
                 undoButton.disabled = false;
                 showMessageBoxContent(true);
-                relation.setCurrentGroup(null);
+                relation.highlightGroup(null);
+                //relation.setCurrentGroup(null);
                 callback();
                 break;
             }
