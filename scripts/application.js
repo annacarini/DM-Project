@@ -74,6 +74,10 @@ var fontSizeSmall = windowW/100;
 var nRead = 0;
 var nWrite = 0;
 
+// Contatore dei pass
+var pass = 0;
+var passCounterText;    // div con il testo
+
 // Rollback
 var rollback = [];
 
@@ -171,6 +175,10 @@ function onBodyLoad() {
 
     // Casella di testo
     textBox = document.getElementById("text_box"); 
+
+    // Contatore pass
+    passCounterText = document.getElementById("pass_counter");
+    passCounterText.textContent = "PASS 0";
     
     // Pulsanti controllo animazione
     playOneStepButton = document.getElementById("step_button"); 
@@ -366,6 +374,8 @@ function reset() {
     nWrite = 0;
     document.getElementById('read-count').textContent = 0;
     document.getElementById('write-count').textContent = 0;
+    pass = 0;
+    passCounterText.textContent = "PASS 0";
     automaticPlay = true;
     paused = true;
     playing = false;
@@ -790,12 +800,22 @@ function play(time = animTime) {
                 // Se non ci sono altre foglie da ordinare (quindi e' l'ultima foglia), passa alla fase di merge-sort
                 if (next_sibling == null) {
                     // UNDO
-                    rollback.push([() => {relation.undoSetCurrentGroup(); buffer.setMode('sort')}, States.RunSorted, textBox.innerHTML]);
+                    rollback.push([() => {
+                        relation.undoSetCurrentGroup();
+                        buffer.setMode('sort');
+                        // Aggiorna pass counter
+                        pass -= 1;
+                        passCounterText.textContent = "PASS " + pass;
+                    }, States.RunSorted, textBox.innerHTML]);
                     // MOVE TO NEXT STATE
                     relation.setCurrentGroup(relation.getFirstNotLeaf());
                     applicationState = States.RunsToMerge;
                     buffer.setMode('merge');
                     showMessage(Messages.childrenMustBeMergeSorted);
+
+                    // Aggiorna pass counter
+                    pass += 1;
+                    passCounterText.textContent = "PASS " + pass;
                 }
                 // Altrimenti se c'e' un'altra foglia da ordinare
                 else {
@@ -1069,12 +1089,16 @@ function play(time = animTime) {
             }
 
             // Cerco il prossimo nodo da mergiare. Se è nullo quello a destra
-            // questo significa che devo prendere il primo nodo all'estrema sinistra. Cioè sto iniziando una nuova ****
+            // questo significa che devo prendere il primo nodo all'estrema sinistra. Cioè sto iniziando un nuovo pass
             var nextNode = relation.getNextLeaf(relation.getCurrentGroup());
             if (!nextNode) {
                 nextNode = relation.relation;
-                while (nextNode.children.length)
+                while (nextNode.children.length) {
                     nextNode = nextNode.children[0];
+                }
+                // Incremento contatore pass
+                pass += 1;
+                passCounterText.textContent = "PASS " + pass;
             }
             nextNode = nextNode.parent;
 
@@ -1090,11 +1114,14 @@ function play(time = animTime) {
                     relation.undoMergeChildren(oldIndex);
                 }
                 var currentGroup = relation.getCurrentGroup();
-                // Se il gruppo corrente è anche il primo singifica che siamo passati al layer superiore. Dobbiamo ritornare a quello inferiore
+                // Se il gruppo corrente e' anche il primo singifica che siamo passati al layer superiore. Dobbiamo ritornare a quello inferiore
                 // e quindi prendere come nodo l'ultimo a destra che sia una foglia.
                 // In caso contrario prendiamo il parente a sinistra.
-                if (currentGroup == relation.getFirstNotLeaf())
+                if (currentGroup == relation.getFirstNotLeaf()) {
+                    pass -= 1;
+                    passCounterText.textContent = "PASS " + pass;
                     relation.setCurrentGroup(relation.getLastLeaf());
+                }
                 else
                     relation.setCurrentGroup(relation.getPreviousLeafParent(currentGroup));
             }, States.RunsMerged, textBox.innerHTML]);
