@@ -1055,6 +1055,14 @@ function play(time = animTime) {
                 rollback.push([() => relation.setCurrentGroup(currentGroup), States.RunsMerged, textBox.innerHTML]);
                 applicationState = States.Finish;
                 showMessage(Messages.finished);
+                playing = false;
+                automaticPlay = false;
+                pauseButton.disabled = true;
+                playJumpButton.disabled = true;
+                playOneStepButton.disabled = true;
+                playButton.disabled = true;
+                undoButton.disabled = false;
+                showMessageBoxContent(true);
                 relation.setCurrentGroup(null);
                 callback();
                 break;
