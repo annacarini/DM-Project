@@ -5,7 +5,7 @@ class Frame {
 
         // se il frame e' piu' piccolo di frameSize (definita dentro application), rimpicciolisci linewidth
         if (size < frameSize) {
-            this.linewidth = Math.min(THICK_LINE, THICK_LINE * (1.5*size/frameSize));
+            this.linewidth = Math.min(THICK_LINE, THICK_LINE * (1.5*size/frameSize)); 
         }
 
         this.x = x;
