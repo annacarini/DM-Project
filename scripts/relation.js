@@ -22,7 +22,7 @@ class Relation {
     spaceBetweenFrames = SPACE_BETWEEN_FRAMES;
     frameColor = "hsl(188,74%,72%)";
     highlightersColor = "black";
-    highlightersMargin = 6;
+    highlightersMargin = VERY_THICK_LINE*2; //6;
     highlighterThickness = VERY_THICK_LINE;
 
     // Valore random massimo per la relazione
@@ -333,7 +333,7 @@ class Relation {
 
         // prendi tutti i valori di questo nodo e di tutti i suoi discendenti
         var group = groupNode.getValueOfAllChildren();
-        group.sort( this.compareFramesByPosition );
+        group.sort( this._compareFramesByPosition );
 
         var firstFrameOfRow = group[0];
         var lastFrameOfRow = group[0];
@@ -747,6 +747,7 @@ class Relation {
         }      
 
         this.highlighterThickness = VERY_THICK_LINE;
+        this.highlightersMargin = VERY_THICK_LINE*2;
 
         // Controlla se gli highlighter c'erano
         if (this.highlighters.length < 1) this.groupHighlighted = null;
